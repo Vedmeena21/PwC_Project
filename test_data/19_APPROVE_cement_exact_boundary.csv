@@ -1,0 +1,2 @@
+invoice_number,invoice_date,vendor_name,vendor_gstin,po_reference,item_description,item_category,quality_grade,quantity_mt,unit_price_inr,amount_inr,gst_percent,gst_amount_inr,total_amount_inr,notes
+INV-CEM-019,2026-05-19,Ambuja Cements Ltd,24AAACA5678G1ZR,PO-2026-1009,OPC 53 Cement IS 8112 Grade,cement,OPC53,500,6200,3100000,28,868000,3968000,Maximum allowed quantity 500 MT at exact approved rate 6200 INR/MT. Boundary test - should APPROVE.

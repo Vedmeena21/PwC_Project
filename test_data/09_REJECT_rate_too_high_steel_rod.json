@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-SR-009",
+  "invoice_date": "2026-05-01",
+  "vendor_name": "Premium Steel Corp",
+  "vendor_gstin": "19AAACP5678N1ZX",
+  "po_reference": "PO-2026-2001",
+  "line_items": [
+    {
+      "description": "TMT Steel Rods IS2062 E250",
+      "quantity": 40,
+      "unit": "MT",
+      "unit_price": 49500,
+      "amount": 1980000,
+      "item_category": "steel_rod",
+      "quality_grade": "IS2062 E250"
+    }
+  ],
+  "subtotal": 1980000,
+  "gst_percent": 18,
+  "gst_amount": 356400,
+  "total_amount": 2336400,
+  "currency": "INR",
+  "notes": "REJECT REASON: Rate 49500 INR/MT exceeds approved rate 45000 by 10%, beyond 5% tolerance."
+}

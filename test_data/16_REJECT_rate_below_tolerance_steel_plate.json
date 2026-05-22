@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-SP-016",
+  "invoice_date": "2026-05-13",
+  "vendor_name": "Discount Steel Plates Co",
+  "vendor_gstin": "36AAACD7654T1ZH",
+  "po_reference": "PO-2026-2007",
+  "line_items": [
+    {
+      "description": "Structural Steel Plates IS2062 E350",
+      "quantity": 20,
+      "unit": "MT",
+      "unit_price": 47000,
+      "amount": 940000,
+      "item_category": "steel_plate",
+      "quality_grade": "IS2062 E350"
+    }
+  ],
+  "subtotal": 940000,
+  "gst_percent": 18,
+  "gst_amount": 169200,
+  "total_amount": 1109200,
+  "currency": "INR",
+  "notes": "REJECT REASON: Rate 47000 INR/MT is 9.6% below approved rate 52000 INR/MT, exceeding 5% lower tolerance. Suspiciously low rate may indicate substandard material."
+}

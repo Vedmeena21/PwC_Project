@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-CEM-002",
+  "invoice_date": "2026-05-03",
+  "vendor_name": "UltraTech Cement Ltd",
+  "vendor_gstin": "24AAACL0290L1ZS",
+  "po_reference": "PO-2026-1002",
+  "line_items": [
+    {
+      "description": "Ordinary Portland Cement OPC 53 Grade",
+      "quantity": 100,
+      "unit": "MT",
+      "unit_price": 6200,
+      "amount": 620000,
+      "item_category": "cement",
+      "quality_grade": "OPC53"
+    }
+  ],
+  "subtotal": 620000,
+  "gst_percent": 28,
+  "gst_amount": 173600,
+  "total_amount": 793600,
+  "currency": "INR",
+  "notes": "OPC 53 grade cement as per IS 8112. Tested batch."
+}

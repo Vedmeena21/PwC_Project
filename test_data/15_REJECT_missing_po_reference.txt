@@ -1,0 +1,27 @@
+INVOICE
+=======
+
+Invoice Number  : INV-SR-015
+Invoice Date    : 2026-05-11
+Vendor Name     : Unknown Steel Vendor
+Vendor GSTIN    : (NOT PROVIDED)
+PO Reference    : (NOT PROVIDED — NO PO ATTACHED)
+
+LINE ITEMS:
+-----------
+Item            : TMT Steel Rods
+Category        : steel_rod
+Quality Grade   : (NOT SPECIFIED)
+Quantity        : 25 MT
+Unit Price      : INR 45,000 per MT
+Amount          : INR 11,25,000
+
+TOTALS:
+-------
+Subtotal        : INR 11,25,000
+GST @18%        : INR 2,02,500
+Grand Total     : INR 13,27,500
+
+REJECT REASON: Missing PO reference, vendor GSTIN, and quality grade specification.
+This invoice cannot be validated without mandatory fields.
+Expected Outcome: REJECT (missing required fields)

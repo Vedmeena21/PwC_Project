@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-CEM-010",
+  "invoice_date": "2026-05-02",
+  "vendor_name": "Shree Cement Ltd",
+  "vendor_gstin": "08AAACS4879K1ZT",
+  "po_reference": "PO-2026-2002",
+  "line_items": [
+    {
+      "description": "OPC 53 Grade Cement",
+      "quantity": 150,
+      "unit": "MT",
+      "unit_price": 7000,
+      "amount": 1050000,
+      "item_category": "cement",
+      "quality_grade": "OPC53"
+    }
+  ],
+  "subtotal": 1050000,
+  "gst_percent": 28,
+  "gst_amount": 294000,
+  "total_amount": 1344000,
+  "currency": "INR",
+  "notes": "REJECT REASON: Rate 7000 INR/MT exceeds approved rate 6200 by 12.9%, beyond 7% tolerance."
+}

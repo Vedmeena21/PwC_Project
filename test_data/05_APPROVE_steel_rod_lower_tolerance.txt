@@ -1,0 +1,30 @@
+INVOICE
+=======
+
+Invoice Number  : INV-SR-005
+Invoice Date    : 2026-05-10
+Vendor Name     : Jindal Steel & Power Ltd
+Vendor GSTIN    : 10AAACJ0007C1ZY
+PO Reference    : PO-2026-1005
+
+LINE ITEMS:
+-----------
+Item            : TMT Steel Rods IS2062 E250 Grade (8mm-32mm dia)
+Category        : steel_rod
+Quality Grade   : IS2062 E250
+Quantity        : 75 MT
+Unit Price      : INR 43,200 per MT   [WITHIN -4.0% of approved rate 45,000]
+Amount          : INR 32,40,000
+
+TOTALS:
+-------
+Subtotal        : INR 32,40,000
+GST @18%        : INR 5,83,200
+Grand Total     : INR 38,23,200
+
+Payment Terms   : 45 days from invoice date
+Delivery        : Ex-works Raipur plant
+Bank Details    : HDFC Bank A/c 50200012345678 IFSC: HDFC0001234
+
+Note: Rate 43,200 INR/MT is within the allowed 5% lower tolerance of approved rate 45,000 INR/MT.
+Expected Outcome: APPROVE

@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-SR-001",
+  "invoice_date": "2026-05-18",
+  "vendor_name": "Tata Steel Supplies Pvt Ltd",
+  "vendor_gstin": "27AABCT1332L1ZV",
+  "po_reference": "PO-2026-1001",
+  "line_items": [
+    {
+      "description": "TMT Steel Rods IS2062 E250",
+      "quantity": 50,
+      "unit": "MT",
+      "unit_price": 45000,
+      "amount": 2250000,
+      "item_category": "steel_rod",
+      "quality_grade": "IS2062 E250"
+    }
+  ],
+  "subtotal": 2250000,
+  "gst_percent": 18,
+  "gst_amount": 405000,
+  "total_amount": 2655000,
+  "currency": "INR",
+  "notes": "REJECT REASON: Invoice number INV-SR-001 is a duplicate of an already-processed invoice (same number, same vendor, same PO). Potential double-payment fraud attempt."
+}

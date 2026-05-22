@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-SP-003",
+  "invoice_date": "2026-05-05",
+  "vendor_name": "JSW Steel Plates Division",
+  "vendor_gstin": "29AAACJ4259H1ZF",
+  "po_reference": "PO-2026-1003",
+  "line_items": [
+    {
+      "description": "Structural Steel Plates IS2062 E350 Grade, 12mm thickness",
+      "quantity": 30,
+      "unit": "MT",
+      "unit_price": 53000,
+      "amount": 1590000,
+      "item_category": "steel_plate",
+      "quality_grade": "IS2062 E350"
+    }
+  ],
+  "subtotal": 1590000,
+  "gst_percent": 18,
+  "gst_amount": 286200,
+  "total_amount": 1876200,
+  "currency": "INR",
+  "notes": "Rate 53000 INR/MT is within 5% tolerance of approved 52000 INR/MT."
+}

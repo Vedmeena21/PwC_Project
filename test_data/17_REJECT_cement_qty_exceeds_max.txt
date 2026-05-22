@@ -1,0 +1,27 @@
+INVOICE
+=======
+
+Invoice Number  : INV-CEM-017
+Invoice Date    : 2026-05-16
+Vendor Name     : Bulk Cement Suppliers Pvt Ltd
+Vendor GSTIN    : 18AABCB3333U1ZJ
+PO Reference    : PO-2026-2008
+
+LINE ITEMS:
+-----------
+Item            : OPC 53 Grade Cement (Bulk Order)
+Category        : cement
+Quality Grade   : OPC53
+Quantity        : 600 MT    [EXCEEDS maximum allowed 500 MT per invoice]
+Unit Price      : INR 6,200 per MT
+Amount          : INR 37,20,000
+
+TOTALS:
+-------
+Subtotal        : INR 37,20,000
+GST @28%        : INR 10,41,600
+Grand Total     : INR 47,61,600
+
+REJECT REASON: Quantity 600 MT exceeds the maximum order quantity of 500 MT per invoice for cement.
+Split into multiple invoices to comply with procurement policy.
+Expected Outcome: REJECT

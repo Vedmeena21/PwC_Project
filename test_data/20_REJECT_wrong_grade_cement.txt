@@ -1,0 +1,27 @@
+INVOICE
+=======
+
+Invoice Number  : INV-CEM-020
+Invoice Date    : 2026-05-20
+Vendor Name     : OPC 33 Cement Traders
+Vendor GSTIN    : 30AABCO9999V1ZC
+PO Reference    : PO-2026-2009
+
+LINE ITEMS:
+-----------
+Item            : Ordinary Portland Cement OPC 33 Grade
+Category        : cement
+Quality Grade   : OPC33    [BELOW minimum required OPC53]
+Quantity        : 100 MT
+Unit Price      : INR 5,800 per MT
+Amount          : INR 5,80,000
+
+TOTALS:
+-------
+Subtotal        : INR 5,80,000
+GST @28%        : INR 1,62,400
+Grand Total     : INR 7,42,400
+
+REJECT REASON 1: Quality grade OPC33 does not meet minimum required OPC53 for cement category.
+REJECT REASON 2: Rate 5800 INR/MT is 6.5% below approved rate 6200 INR/MT which also exceeds the 7% lower tolerance boundary.
+Expected Outcome: REJECT (wrong grade + rate suspiciously low)

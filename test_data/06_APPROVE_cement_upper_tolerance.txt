@@ -1,0 +1,30 @@
+INVOICE
+=======
+
+Invoice Number  : INV-CEM-006
+Invoice Date    : 2026-05-12
+Vendor Name     : ACC Limited
+Vendor GSTIN    : 11AAACA0615L1Z3
+PO Reference    : PO-2026-1006
+
+LINE ITEMS:
+-----------
+Item            : Portland Cement OPC 53 Grade (50kg bags)
+Category        : cement
+Quality Grade   : OPC53
+Quantity        : 200 MT
+Unit Price      : INR 6,620 per MT   [WITHIN +6.8% of approved rate 6,200]
+Amount          : INR 13,24,000
+
+TOTALS:
+-------
+Subtotal        : INR 13,24,000
+GST @28%        : INR 3,70,720
+Grand Total     : INR 16,94,720
+
+Payment Terms   : 30 days
+Delivery        : Site delivery included
+Batch Test Report: Enclosed (IS 8112 compliant)
+
+Note: Rate 6,620 INR/MT is within allowed 7% upper tolerance of approved rate 6,200 INR/MT.
+Expected Outcome: APPROVE

@@ -1,0 +1,2 @@
+invoice_number,invoice_date,vendor_name,vendor_gstin,po_reference,item_description,item_category,quality_grade,quantity_mt,unit_price_inr,amount_inr,gst_percent,gst_amount_inr,total_amount_inr,expected_outcome
+INV-SR-008,2026-05-15,Rathi Steel Pvt Ltd,06AAACRR4567M1ZB,PO-2026-1008,Fe500 TMT Steel Rods IS2062 E250,steel_rod,IS2062 E250,100,45000,4500000,18,810000,5310000,APPROVE

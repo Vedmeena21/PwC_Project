@@ -1,0 +1,2 @@
+invoice_number,invoice_date,vendor_name,vendor_gstin,po_reference,item_description,item_category,quality_grade,quantity_mt,unit_price_inr,amount_inr,gst_percent,gst_amount_inr,total_amount_inr,reject_reason
+INV-SR-013,2026-05-07,Cheap Steel Suppliers,20AABCC4321R1ZM,PO-2026-2005,Steel Rods Fe415 Grade,steel_rod,Fe415,30,45000,1350000,18,243000,1593000,REJECT - Quality grade Fe415 does not meet minimum required IS2062 E250 for steel_rod

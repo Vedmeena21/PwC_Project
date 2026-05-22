@@ -1,0 +1,2 @@
+invoice_number,invoice_date,vendor_name,vendor_gstin,po_reference,item_description,item_category,quality_grade,quantity_mt,unit_price_inr,claimed_amount_inr,correct_amount_inr,discrepancy_inr,gst_percent,claimed_total_inr,correct_total_inr,reject_reason
+INV-CEM-014,2026-05-09,Birla Cement Dealers,04AABCB2222S1ZN,PO-2026-2006,OPC 53 Grade Cement,cement,OPC53,80,6200,620000,496000,124000,28,793600,635520,REJECT - Claimed amount 620000 does not match quantity x unit_price (80 x 6200 = 496000). Arithmetic error of 124000 INR.

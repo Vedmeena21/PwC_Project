@@ -1,0 +1,26 @@
+INVOICE
+=======
+
+Invoice Number  : INV-SR-011
+Invoice Date    : 2026-05-04
+Vendor Name     : Local Steel Traders
+Vendor GSTIN    : 09AABCL1111P1ZQ
+PO Reference    : PO-2026-2003
+
+LINE ITEMS:
+-----------
+Item            : TMT Steel Rods IS2062 E250
+Category        : steel_rod
+Quality Grade   : IS2062 E250
+Quantity        : 5 MT    [BELOW minimum required 10 MT]
+Unit Price      : INR 45,000 per MT
+Amount          : INR 2,25,000
+
+TOTALS:
+-------
+Subtotal        : INR 2,25,000
+GST @18%        : INR 40,500
+Grand Total     : INR 2,65,500
+
+REJECT REASON: Quantity 5 MT is below minimum order quantity of 10 MT for steel_rod category.
+Expected Outcome: REJECT

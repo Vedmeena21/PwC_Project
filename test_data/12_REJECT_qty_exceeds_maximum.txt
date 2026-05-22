@@ -1,0 +1,26 @@
+INVOICE
+=======
+
+Invoice Number  : INV-SP-012
+Invoice Date    : 2026-05-06
+Vendor Name     : Mega Steel Plates Pvt Ltd
+Vendor GSTIN    : 22AABCM9876Q1ZD
+PO Reference    : PO-2026-2004
+
+LINE ITEMS:
+-----------
+Item            : Structural Steel Plates IS2062 E350
+Category        : steel_plate
+Quality Grade   : IS2062 E350
+Quantity        : 150 MT    [EXCEEDS maximum allowed 100 MT per invoice]
+Unit Price      : INR 52,000 per MT
+Amount          : INR 78,00,000
+
+TOTALS:
+-------
+Subtotal        : INR 78,00,000
+GST @18%        : INR 14,04,000
+Grand Total     : INR 92,04,000
+
+REJECT REASON: Quantity 150 MT exceeds maximum order quantity of 100 MT per invoice for steel_plate category.
+Expected Outcome: REJECT
