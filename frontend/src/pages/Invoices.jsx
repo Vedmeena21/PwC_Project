@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FileText, Search, RefreshCw, Upload } from 'lucide-react'
+import { FileText, Search, RefreshCw, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
 import UploadZone from '@/components/ui/UploadZone'
+import { InvoiceRowSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
 
-// All possible status filter values — "all" shows every invoice
 const STATUS_FILTERS = ['all', 'pending', 'processing', 'flagged', 'approved', 'rejected', 'extraction_failed']
+const PAGE_SIZE      = 20
 
 export default function Invoices() {
   const navigate = useNavigate()
   const toast    = useToast()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [statusFilter, setStatusFilter] = useState(() => {
     const s = searchParams.get('status')
@@ -24,27 +25,30 @@ export default function Invoices() {
   useEffect(() => {
     const s = searchParams.get('status')
     setStatusFilter(s && STATUS_FILTERS.includes(s) ? s : 'all')
+    setPage(0)
   }, [searchParams])
-  const [search,       setSearch]       = useState('')
-  const [showUpload,   setShowUpload]   = useState(false)
-  const [uploading,    setUploading]    = useState(false)
 
-  // Pass status filter to API only when it's not "all" (API ignores missing param)
-  const { invoices, loading, refetch } = useInvoices(
-    statusFilter !== 'all' ? { status: statusFilter } : {}
-  )
+  const [search,         setSearch]         = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [showUpload,     setShowUpload]     = useState(false)
+  const [uploading,      setUploading]      = useState(false)
+  const [page,           setPage]           = useState(0)
 
-  // Client-side search across invoice number, vendor, and PO reference
-  // (keeps the API simple — no search endpoint needed for this data volume)
-  const filtered = invoices.filter((inv) => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return (
-      inv.invoice_number?.toLowerCase().includes(q) ||
-      inv.vendor_name?.toLowerCase().includes(q) ||
-      inv.po_reference?.toLowerCase().includes(q)
-    )
-  })
+  // Debounce search input — avoids hammering the API on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(0) }, 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const apiParams = {
+    limit:  PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+    ...(statusFilter !== 'all' && { status: statusFilter }),
+    ...(debouncedSearch        && { search: debouncedSearch }),
+  }
+
+  const { invoices, total = 0, loading, refetch } = useInvoices(apiParams)
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const handleUpload = async (file) => {
     setUploading(true)
@@ -61,6 +65,12 @@ export default function Invoices() {
     }
   }
 
+  const handleStatusChange = (s) => {
+    setPage(0)
+    if (s === 'all') setSearchParams({})
+    else             setSearchParams({ status: s })
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* ── Header ── */}
@@ -68,12 +78,13 @@ export default function Invoices() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900">Invoices</h1>
           <p className="text-slate-500 text-sm mt-1">
-            {filtered.length} invoice{filtered.length !== 1 ? 's' : ''} found
+            {loading ? 'Loading...' : `${total} invoice${total !== 1 ? 's' : ''} ${statusFilter !== 'all' ? `· ${statusFilter}` : 'total'}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button onClick={refetch} className="btn-secondary">
-            <RefreshCw className="w-4 h-4" /> <span className="hidden sm:inline">Refresh</span>
+          <button onClick={refetch} className="btn-secondary" title="Refresh">
+            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
           <button onClick={() => setShowUpload(!showUpload)} className="btn-primary">
             <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Upload</span>
@@ -81,14 +92,14 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* ── Inline upload panel — shown/hidden by toggle ── */}
+      {/* ── Inline upload panel ── */}
       {showUpload && (
         <div className="card p-6 animate-slide-up">
           <UploadZone onUpload={handleUpload} uploading={uploading} />
         </div>
       )}
 
-      {/* ── Filters: search + status pills ── */}
+      {/* ── Filters ── */}
       <div className="flex flex-col gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -99,17 +110,16 @@ export default function Invoices() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        {/* Horizontally scrollable pill row — no wrapping on mobile */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {STATUS_FILTERS.map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => handleStatusChange(s)}
               className={cn(
-                'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border whitespace-nowrap flex-shrink-0',
+                'px-3 py-1.5 text-xs font-medium rounded-lg transition-all border whitespace-nowrap flex-shrink-0',
                 statusFilter === s
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
               )}
             >
               {s === 'all' ? 'All' : s.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
@@ -121,12 +131,25 @@ export default function Invoices() {
       {/* ── Invoice table ── */}
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-sm">Loading invoices...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">No invoices found</p>
-            <p className="text-slate-400 text-xs mt-1">Try adjusting your filters or upload an invoice</p>
+          <InvoiceRowSkeleton rows={6} />
+        ) : invoices.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto">
+              <FileText className="w-7 h-7 text-slate-400" />
+            </div>
+            <div>
+              <p className="text-slate-700 text-sm font-semibold">No invoices found</p>
+              <p className="text-slate-400 text-xs mt-1">
+                {search || statusFilter !== 'all'
+                  ? 'Try adjusting your filters or search query'
+                  : 'Upload your first invoice to get started'}
+              </p>
+            </div>
+            {!search && statusFilter === 'all' && (
+              <button onClick={() => setShowUpload(true)} className="btn-primary mt-2">
+                <Upload className="w-4 h-4" /> Upload Invoice
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -143,7 +166,7 @@ export default function Invoices() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map((inv) => (
+                {invoices.map((inv) => (
                   <tr
                     key={inv.id}
                     onClick={() => navigate(`/invoices/${inv.id}`)}
@@ -179,6 +202,36 @@ export default function Invoices() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {!loading && total > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-t border-slate-100 bg-slate-50/40">
+            <p className="text-xs text-slate-500">
+              Showing <span className="font-semibold text-slate-700">{page * PAGE_SIZE + 1}</span>–
+              <span className="font-semibold text-slate-700">{Math.min((page + 1) * PAGE_SIZE, total)}</span> of{' '}
+              <span className="font-semibold text-slate-700">{total}</span>
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="btn-secondary text-xs py-1.5 px-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+              </button>
+              <span className="text-xs text-slate-500 px-2">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="btn-secondary text-xs py-1.5 px-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>

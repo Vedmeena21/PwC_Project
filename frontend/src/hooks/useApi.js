@@ -8,16 +8,18 @@ import { invoiceApi, rulebookApi } from '@/services/api'
 // Re-fetches whenever filters change. Exposes refetch() for manual refresh.
 export function useInvoices(filters = {}) {
   const [invoices, setInvoices] = useState([])
+  const [total,    setTotal]    = useState(0)
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
 
   const fetch = useCallback(async () => {
-    if (filters.limit === 0) { setInvoices([]); setLoading(false); return }
+    if (filters.limit === 0) { setInvoices([]); setTotal(0); setLoading(false); return }
     setLoading(true)
     setError(null)
     try {
       const data = await invoiceApi.list(filters)
       setInvoices(data.invoices || [])
+      setTotal(data.total ?? (data.invoices?.length || 0))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -26,7 +28,7 @@ export function useInvoices(filters = {}) {
   }, [JSON.stringify(filters)])
 
   useEffect(() => { fetch() }, [fetch])
-  return { invoices, loading, error, refetch: fetch }
+  return { invoices, total, loading, error, refetch: fetch }
 }
 
 // Fetches a single invoice with full detail (line items, checks, audit trail).

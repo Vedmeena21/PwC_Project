@@ -91,4 +91,50 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Skeleton loader — shimmering placeholder used while data is loading */
+  .skeleton {
+    @apply relative overflow-hidden bg-slate-100 rounded-md;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+}
+
+/* Fade and slide animations referenced throughout the app */
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 250ms ease-out;
+  }
+  .animate-slide-up {
+    animation: slide-up 300ms ease-out;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1;   }
+    50%      { opacity: 0.6; }
+  }
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
 }

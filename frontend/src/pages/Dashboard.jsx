@@ -8,6 +8,7 @@ import { invoiceApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import UploadZone from '@/components/ui/UploadZone'
 import StatusBadge from '@/components/ui/StatusBadge'
+import { InvoiceRowSkeleton, StatCardSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
 
 const PIE_COLORS = ['#16a34a', '#dc2626', '#f59e0b', '#0ea5e9', '#6b7280']
@@ -211,7 +212,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const toast    = useToast()
 
-  const { stats }                                  = useStats()
+  const { stats, loading: statsLoading }           = useStats()
   const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 6 })
   const [uploading, setUploading]                  = useState(false)
 
@@ -259,10 +260,16 @@ export default function Dashboard() {
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <StatCard icon={FileText}      label="Total"    value={stats?.total}    color="text-slate-900" sub="all time"      filterStatus="total"    />
-        <StatCard icon={CheckCircle}   label="Approved" value={stats?.approved} color="text-green-600" sub={approvalRate != null ? `${approvalRate}% rate` : undefined} filterStatus="approved" />
-        <StatCard icon={XCircle}       label="Rejected" value={stats?.rejected} color="text-red-600"   filterStatus="rejected" />
-        <StatCard icon={AlertTriangle} label="Flagged"  value={stats?.flagged}  color="text-amber-600" sub="needs review"  filterStatus="flagged"  />
+        {statsLoading && !stats ? (
+          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard icon={FileText}      label="Total"    value={stats?.total}    color="text-slate-900" sub="all time"      filterStatus="total"    />
+            <StatCard icon={CheckCircle}   label="Approved" value={stats?.approved} color="text-green-600" sub={approvalRate != null ? `${approvalRate}% rate` : undefined} filterStatus="approved" />
+            <StatCard icon={XCircle}       label="Rejected" value={stats?.rejected} color="text-red-600"   filterStatus="rejected" />
+            <StatCard icon={AlertTriangle} label="Flagged"  value={stats?.flagged}  color="text-amber-600" sub="needs review"  filterStatus="flagged"  />
+          </>
+        )}
       </div>
 
       {/* ── Middle row ── */}
@@ -356,11 +363,16 @@ export default function Dashboard() {
           </button>
         </div>
         {invLoading ? (
-          <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
+          <InvoiceRowSkeleton rows={4} />
         ) : invoices.length === 0 ? (
-          <div className="p-8 text-center space-y-2">
-            <FileText className="w-8 h-8 text-slate-200 mx-auto" />
-            <p className="text-slate-400 text-sm">No invoices yet. Upload one above.</p>
+          <div className="p-10 text-center space-y-3">
+            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto">
+              <FileText className="w-7 h-7 text-slate-400" />
+            </div>
+            <div>
+              <p className="text-slate-700 text-sm font-semibold">No invoices yet</p>
+              <p className="text-slate-400 text-xs mt-1">Drop a PDF into the upload zone above to get started.</p>
+            </div>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">

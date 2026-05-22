@@ -35,8 +35,13 @@ export const invoiceApi = {
   list:   (params = {}) => api.get('/invoices/', { params }),
   get:    (id) => api.get(`/invoices/${id}`),
   review: (id, payload) => api.post(`/invoices/${id}/review`, payload),
+  delete: (id, by = 'admin') => api.delete(`/invoices/${id}`, { params: { deleted_by: by } }),
   stats:  () => api.get('/invoices/stats/summary'),
 }
+
+// Wake-up ping — Render free tier sleeps after 15min of inactivity.
+// Frontend calls this on app load so the first real request is fast.
+export const wakeBackend = () => fetch(`${baseURL.replace(/\/api$/, '')}/health`).catch(() => {})
 
 // ── Rulebook API ──────────────────────────────────────────────────────────────
 export const rulebookApi = {

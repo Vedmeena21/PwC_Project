@@ -222,14 +222,44 @@ async def upload_invoice(background_tasks: BackgroundTasks, file: UploadFile = F
 
 # ── GET /invoices/ ────────────────────────────────────────────────────────────
 # Uses the invoice_summary view (joins recommendations + rulebook version).
+# Supports filtering by status, search across invoice_number/vendor/po,
+# and pagination via limit + offset.
 @router.get("/")
-async def list_invoices(status: str = None, limit: int = 50, offset: int = 0):
+async def list_invoices(
+    status: str = None,
+    search: str = None,
+    limit: int  = 50,
+    offset: int = 0,
+):
     db = get_supabase()
-    query = db.table("invoice_summary").select("*").limit(limit).offset(offset)
+
+    # Get total count first (for pagination UI). PostgREST exposes the count
+    # via a separate query — cheap as long as we only ask for one column.
+    count_q = db.table("invoice_summary").select("id", count="exact")
     if status:
-        query = query.eq("status", status)   # filter by status when provided
+        count_q = count_q.eq("status", status)
+    if search:
+        # PostgREST `or` with `ilike` on multiple columns
+        pattern = f"%{search}%"
+        count_q = count_q.or_(
+            f"invoice_number.ilike.{pattern},vendor_name.ilike.{pattern},po_reference.ilike.{pattern}"
+        )
+    count_res = count_q.execute()
+    total     = count_res.count or 0
+
+    # Then fetch the page
+    query = db.table("invoice_summary").select("*").order("uploaded_at", desc=True) \
+              .range(offset, offset + limit - 1)
+    if status:
+        query = query.eq("status", status)
+    if search:
+        pattern = f"%{search}%"
+        query = query.or_(
+            f"invoice_number.ilike.{pattern},vendor_name.ilike.{pattern},po_reference.ilike.{pattern}"
+        )
     res = query.execute()
-    return {"invoices": res.data, "total": len(res.data)}
+
+    return {"invoices": res.data, "total": total, "limit": limit, "offset": offset}
 
 
 # ── GET /invoices/stats/summary ───────────────────────────────────────────────
@@ -290,3 +320,29 @@ async def review_invoice(invoice_id: str, action: ReviewAction):
     _log(db, invoice_id, action.action, actor=action.reviewer_name, details={"notes": action.notes})
 
     return {"status": action.action, "message": f"Invoice {action.action} by {action.reviewer_name}"}
+
+
+# ── DELETE /invoices/{invoice_id} ─────────────────────────────────────────────
+# Removes the invoice row + storage file. Cascade handles line items / checks.
+@router.delete("/{invoice_id}")
+async def delete_invoice(invoice_id: str, deleted_by: str = "admin"):
+    db = get_supabase()
+    settings = get_settings()
+
+    inv = db.table("invoices").select("pdf_path,invoice_number").eq("id", invoice_id).limit(1).execute()
+    if not inv.data:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    pdf_path = inv.data[0].get("pdf_path")
+
+    # Remove storage object first; if it fails we still continue so the DB row
+    # doesn't get orphaned. Supabase storage allows missing files gracefully.
+    if pdf_path:
+        try:
+            db.storage.from_(settings.supabase_storage_bucket).remove([pdf_path])
+        except Exception:
+            pass
+
+    db.table("invoices").delete().eq("id", invoice_id).execute()
+
+    return {"deleted": True, "id": invoice_id, "by": deleted_by}

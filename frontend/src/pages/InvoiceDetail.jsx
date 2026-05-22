@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, CheckCircle, XCircle, AlertCircle,
-  Clock, FileText, ChevronDown, ChevronUp, User, Calendar, Hash,
+  Clock, FileText, ChevronDown, ChevronUp, User, Calendar, Hash, Trash2,
 } from 'lucide-react'
 import { useInvoice } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
+import { UserLoginModal } from '@/components/ui/PasswordGate'
 import { formatDate, formatDateTime, formatCurrency, cn } from '@/lib/utils'
 
 // ── CheckIcon ─────────────────────────────────────────────────────────────────
@@ -71,6 +72,22 @@ export default function InvoiceDetail() {
   const [reviewNotes,  setReviewNotes]  = useState('')
   const [submitting,   setSubmitting]   = useState(false)
   const [showAudit,    setShowAudit]    = useState(false)
+  const [showDeleteAuth, setShowDeleteAuth] = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
+
+  const handleDelete = async (user) => {
+    setShowDeleteAuth(false)
+    if (!window.confirm('Delete this invoice permanently? This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      await invoiceApi.delete(id, user.name)
+      toast({ type: 'success', message: `Invoice deleted by ${user.name}` })
+      setTimeout(() => navigate('/invoices'), 500)
+    } catch (e) {
+      toast({ type: 'error', message: e.message })
+      setDeleting(false)
+    }
+  }
 
   if (loading && !data) {
     return (
@@ -117,7 +134,16 @@ export default function InvoiceDetail() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Back + title ── */}
+      {showDeleteAuth && (
+        <UserLoginModal
+          title="Confirm Delete"
+          subtitle="Re-enter your credentials to delete this invoice"
+          onLogin={handleDelete}
+          onCancel={() => setShowDeleteAuth(false)}
+        />
+      )}
+
+      {/* ── Back + title + delete ── */}
       <div className="flex items-start gap-3">
         <button onClick={() => navigate('/invoices')} className="btn-secondary mt-0.5 flex-shrink-0">
           <ArrowLeft className="w-4 h-4" />
@@ -131,6 +157,15 @@ export default function InvoiceDetail() {
             {invoice?.vendor_name} · Uploaded {formatDateTime(invoice?.uploaded_at)}
           </p>
         </div>
+        <button
+          onClick={() => setShowDeleteAuth(true)}
+          disabled={deleting}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors flex-shrink-0 mt-0.5 disabled:opacity-50"
+          title="Delete invoice"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{deleting ? 'Deleting…' : 'Delete'}</span>
+        </button>
       </div>
 
       {/* ── Verdict / processing banner ── */}
