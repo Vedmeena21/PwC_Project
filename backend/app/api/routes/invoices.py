@@ -13,6 +13,9 @@ from app.models import ReviewAction
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
+# 10 MB per file — Render free tier RAM is 512 MB, and Groq context is also bounded.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -46,6 +49,51 @@ def _process_invoice(invoice_id: str, file_bytes: bytes, filename: str = "invoic
 
         # Stage 2 — extract structured data via the appropriate parser + Groq
         extracted = extract_invoice_data(file_bytes, filename)
+
+        # Stage 2.5 — duplicate detection: if another invoice already exists with
+        # the same (invoice_number, vendor_name), flag this one immediately.
+        # Prevents double-payment / re-submission fraud.
+        if extracted.invoice_number and extracted.vendor_name:
+            dup = (
+                db.table("invoices")
+                .select("id")
+                .eq("invoice_number", extracted.invoice_number)
+                .eq("vendor_name", extracted.vendor_name)
+                .neq("id", invoice_id)
+                .limit(1)
+                .execute()
+            )
+            if dup.data:
+                db.table("invoices").update({
+                    "invoice_number": extracted.invoice_number,
+                    "vendor_name":    extracted.vendor_name,
+                    "status":         "flagged",
+                }).eq("id", invoice_id).execute()
+                _log(db, invoice_id, "duplicate_detected", details={
+                    "original_id": dup.data[0]["id"],
+                    "invoice_number": extracted.invoice_number,
+                })
+                # Persist a single failed check so the UI shows why
+                db.table("validation_results").insert({
+                    "invoice_id":     invoice_id,
+                    "check_name":     "duplicate_check",
+                    "check_label":    "Duplicate Detection",
+                    "passed":         False,
+                    "expected_value": "unique invoice number + vendor",
+                    "actual_value":   f"{extracted.invoice_number} / {extracted.vendor_name}",
+                    "message":        f"Duplicate of invoice {dup.data[0]['id']}",
+                    "severity":       "error",
+                }).execute()
+                db.table("invoice_recommendations").insert({
+                    "invoice_id":    invoice_id,
+                    "verdict":       "reject",
+                    "confidence":    "high",
+                    "summary":       "Duplicate invoice detected — same number & vendor already on file",
+                    "total_checks":  1,
+                    "passed_checks": 0,
+                    "failed_checks": 1,
+                }).execute()
+                return
 
         # Stage 3 — backfill invoice header fields first (before line items)
         # so the unique constraint on (invoice_number, vendor_name) is satisfied
@@ -172,6 +220,13 @@ async def upload_invoice(background_tasks: BackgroundTasks, file: UploadFile = F
     settings = get_settings()
 
     file_bytes   = await file.read()
+    if len(file_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large ({len(file_bytes)/1024/1024:.1f} MB). Maximum allowed: {MAX_UPLOAD_BYTES/1024/1024:.0f} MB",
+        )
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
     # Preserve original extension in storage so the file is identifiable
     file_name    = f"{uuid.uuid4()}{ext}"
     storage_path = f"invoices/{file_name}"
@@ -189,13 +244,21 @@ async def upload_invoice(background_tasks: BackgroundTasks, file: UploadFile = F
     }
     content_type = mime_map.get(ext, "application/octet-stream")
 
-    # Upload to Supabase Storage (bucket must exist and be set to public)
+    # Upload to Supabase Storage. We store only the path and generate
+    # short-lived signed URLs on demand (see GET /invoices/{id}/file-url).
     db.storage.from_(settings.supabase_storage_bucket).upload(
         path=storage_path,
         file=file_bytes,
         file_options={"content-type": content_type},
     )
-    public_url = db.storage.from_(settings.supabase_storage_bucket).get_public_url(storage_path)
+    # Cache a 7-day signed URL on the row so the list endpoint stays cheap.
+    try:
+        signed = db.storage.from_(settings.supabase_storage_bucket).create_signed_url(
+            storage_path, 60 * 60 * 24 * 7
+        )
+        public_url = signed.get("signedURL") or signed.get("signed_url") or ""
+    except Exception:
+        public_url = ""
 
     # Create the invoice row with placeholder values — extraction fills them in
     invoice_res = db.table("invoices").insert({
@@ -264,18 +327,20 @@ async def list_invoices(
 
 # ── GET /invoices/stats/summary ───────────────────────────────────────────────
 # Aggregates invoice counts per status for the dashboard stat cards.
+# Uses PostgREST count="exact" per status — O(1) per status instead of O(N).
 # Must be defined BEFORE /{invoice_id} to avoid route conflict.
 @router.get("/stats/summary")
 async def get_stats():
     db = get_supabase()
-    res = db.table("invoices").select("status").execute()
+    statuses = ["pending", "processing", "approved", "rejected", "flagged", "extraction_failed"]
 
-    counts = {s: 0 for s in ["pending", "processing", "approved", "rejected", "flagged", "extraction_failed"]}
-    for row in res.data:
-        s = row["status"]
-        if s in counts:
-            counts[s] += 1
-    counts["total"] = len(res.data)
+    counts: dict = {}
+    for s in statuses:
+        res = db.table("invoices").select("id", count="exact", head=True).eq("status", s).execute()
+        counts[s] = res.count or 0
+
+    total_res    = db.table("invoices").select("id", count="exact", head=True).execute()
+    counts["total"] = total_res.count or 0
     return counts
 
 
@@ -320,6 +385,24 @@ async def review_invoice(invoice_id: str, action: ReviewAction):
     _log(db, invoice_id, action.action, actor=action.reviewer_name, details={"notes": action.notes})
 
     return {"status": action.action, "message": f"Invoice {action.action} by {action.reviewer_name}"}
+
+
+# ── GET /invoices/{invoice_id}/file-url ───────────────────────────────────────
+# Returns a fresh short-lived signed URL for the stored invoice file.
+# Used by the detail page so links never go stale.
+@router.get("/{invoice_id}/file-url")
+async def get_invoice_file_url(invoice_id: str):
+    db       = get_supabase()
+    settings = get_settings()
+
+    inv = db.table("invoices").select("pdf_path").eq("id", invoice_id).limit(1).execute()
+    if not inv.data or not inv.data[0].get("pdf_path"):
+        raise HTTPException(status_code=404, detail="Invoice file not found")
+
+    pdf_path = inv.data[0]["pdf_path"]
+    signed = db.storage.from_(settings.supabase_storage_bucket).create_signed_url(pdf_path, 3600)
+    url = signed.get("signedURL") or signed.get("signed_url") or ""
+    return {"url": url, "expires_in": 3600}
 
 
 # ── DELETE /invoices/{invoice_id} ─────────────────────────────────────────────

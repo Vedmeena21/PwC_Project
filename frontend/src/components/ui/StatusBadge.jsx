@@ -10,7 +10,7 @@ const CONFIG = {
   processing:        { label: 'Processing',   cls: 'badge-processing' },  // pulses
   approved:          { label: 'Approved',     cls: 'badge-approved' },
   rejected:          { label: 'Rejected',     cls: 'badge-rejected' },
-  flagged:           { label: 'Flagged',      cls: 'badge-flagged' },
+  flagged:           { label: 'Needs Review', cls: 'badge-flagged' },
   extraction_failed: { label: 'Failed',       cls: 'badge-extraction_failed' },
   // AI verdict values
   approve:           { label: 'Approve',      cls: 'badge bg-green-100 text-green-700' },

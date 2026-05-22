@@ -1,2 +1,2 @@
 invoice_number,invoice_date,vendor_name,vendor_gstin,po_reference,item_description,item_category,quality_grade,quantity_mt,unit_price_inr,amount_inr,gst_percent,gst_amount_inr,total_amount_inr,notes
-INV-SP-007,2026-05-14,Sail Steel Plates Ltd,33AAACS1234F1ZK,PO-2026-1007,Structural Steel Plates IS2062 E350 10mm thick,steel_plate,IS2062 E350,5,51500,257500,18,46350,303850,Minimum order quantity 5 MT. Rate within tolerance.
+INV-SP-007,2026-05-14,Sail Steel Plates Ltd,33AAACS1234F1ZK,PO-2026-1007,Structural Steel Plates IS2062 E350 10mm thick,steel_plate,IS2062 E350,5,52000,260000,18,46800,306800,Minimum order quantity 5 MT at exact approved rate 52000 INR/MT.

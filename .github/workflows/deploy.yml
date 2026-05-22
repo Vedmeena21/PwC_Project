@@ -5,13 +5,18 @@ on:
     branches: [main]
 
 jobs:
-  # Render auto-deploys the backend when main is pushed — no extra step needed.
-  # Vercel auto-deploys the frontend when main is pushed — no extra step needed.
-  # Both services are connected to this GitHub repo via their respective dashboards.
-
-  notify:
-    name: Deployment triggered
+  deploy-backend:
+    name: Deploy Backend (Render auto-deploys on push)
     runs-on: ubuntu-latest
     steps:
-      - name: Confirm push received
-        run: echo "Push to main received. Render and Vercel will auto-deploy."
+      - name: Trigger Render Deploy
+        run: |
+          echo "Render auto-deploys from GitHub. Ensure render.yaml is connected."
+
+  deploy-frontend:
+    name: Deploy Frontend (Vercel auto-deploys on push)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy
+        run: |
+          echo "Vercel auto-deploys from GitHub. Ensure project is linked."

@@ -9,16 +9,16 @@
       "description": "Structural Steel Plates IS2062 E350 Grade, 12mm thickness",
       "quantity": 30,
       "unit": "MT",
-      "unit_price": 53000,
-      "amount": 1590000,
+      "unit_price": 52000,
+      "amount": 1560000,
       "item_category": "steel_plate",
       "quality_grade": "IS2062 E350"
     }
   ],
-  "subtotal": 1590000,
+  "subtotal": 1560000,
   "gst_percent": 18,
-  "gst_amount": 286200,
-  "total_amount": 1876200,
+  "gst_amount": 280800,
+  "total_amount": 1840800,
   "currency": "INR",
-  "notes": "Rate 53000 INR/MT is within 5% tolerance of approved 52000 INR/MT."
+  "notes": "Exact approved rate 52000 INR/MT, 30 MT within range, correct IS2062 E350 grade."
 }

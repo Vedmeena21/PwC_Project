@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoiceApi, rulebookApi } from '@/services/api'
 
 
@@ -38,6 +38,12 @@ export function useInvoice(id) {
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const fetch = useCallback(async () => {
     if (!id) return
@@ -45,22 +51,31 @@ export function useInvoice(id) {
     setError(null)
     try {
       const result = await invoiceApi.get(id)
-      setData(result)
+      if (mountedRef.current) setData(result)
     } catch (e) {
-      setError(e.message)
+      if (mountedRef.current) setError(e.message || 'Failed to load invoice')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }, [id])
 
   useEffect(() => { fetch() }, [fetch])
 
+  // Poll while processing. Stop after 60 attempts (~3 minutes) so a stuck
+  // background task doesn't poll forever and burn quota.
+  const pollCountRef = useRef(0)
   useEffect(() => {
     const status = data?.invoice?.status
-    if (status === 'processing' || (status === 'pending' && !data?.invoice?.verdict)) {
-      const timer = setTimeout(fetch, 3000)
-      return () => clearTimeout(timer)
-    }
+    const stillProcessing =
+      status === 'processing' ||
+      (status === 'pending' && !data?.invoice?.verdict)
+    if (!stillProcessing) { pollCountRef.current = 0; return }
+    if (pollCountRef.current >= 60) return
+    const timer = setTimeout(() => {
+      pollCountRef.current += 1
+      fetch()
+    }, 3000)
+    return () => clearTimeout(timer)
   }, [data, fetch])
 
   return { data, loading, error, refetch: fetch }

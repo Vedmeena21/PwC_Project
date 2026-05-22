@@ -17,7 +17,15 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res.data,
   (err) => {
-    const message = err.response?.data?.detail || err.message || 'Something went wrong'
+    let message = 'Something went wrong'
+    const detail = err.response?.data?.detail
+    if (typeof detail === 'string') message = detail
+    else if (Array.isArray(detail)) message = detail.map(d => d.msg || JSON.stringify(d)).join(', ')
+    else if (detail && typeof detail === 'object') message = JSON.stringify(detail)
+    else if (err.message) message = err.message
+    if (err.code === 'ECONNABORTED') message = 'Request timed out — the backend may be cold-starting. Try again.'
+    if (err.response?.status === 413) message = 'File is too large (max 10 MB).'
+    if (err.response?.status === 404) message = detail || 'Not found.'
     return Promise.reject(new Error(message))
   }
 )
@@ -37,6 +45,7 @@ export const invoiceApi = {
   review: (id, payload) => api.post(`/invoices/${id}/review`, payload),
   delete: (id, by = 'admin') => api.delete(`/invoices/${id}`, { params: { deleted_by: by } }),
   stats:  () => api.get('/invoices/stats/summary'),
+  fileUrl:(id) => api.get(`/invoices/${id}/file-url`),
 }
 
 // Wake-up ping — Render free tier sleeps after 15min of inactivity.

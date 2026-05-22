@@ -77,7 +77,6 @@ export default function InvoiceDetail() {
 
   const handleDelete = async (user) => {
     setShowDeleteAuth(false)
-    if (!window.confirm('Delete this invoice permanently? This cannot be undone.')) return
     setDeleting(true)
     try {
       await invoiceApi.delete(id, user.name)
@@ -86,6 +85,17 @@ export default function InvoiceDetail() {
     } catch (e) {
       toast({ type: 'error', message: e.message })
       setDeleting(false)
+    }
+  }
+
+  // Fetch a fresh signed URL when the user clicks "Open file"
+  const openSourceFile = async () => {
+    try {
+      const { url } = await invoiceApi.fileUrl(id)
+      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+      else toast({ type: 'error', message: 'File link could not be generated' })
+    } catch (e) {
+      toast({ type: 'error', message: e.message })
     }
   }
 
@@ -221,13 +231,13 @@ export default function InvoiceDetail() {
             )}
           </div>
 
-          {/* PDF link — opens Supabase public URL in a new tab */}
-          {invoice?.pdf_url && (
+          {/* Source file — fetches a fresh short-lived signed URL on click */}
+          {invoice?.pdf_path && (
             <div className="card p-5">
               <h2 className="text-sm font-semibold text-slate-900 mb-3">Source Document</h2>
-              <a href={invoice.pdf_url} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center">
-                <FileText className="w-4 h-4" /> Open PDF in New Tab
-              </a>
+              <button onClick={openSourceFile} className="btn-secondary w-full justify-center">
+                <FileText className="w-4 h-4" /> Open Original File
+              </button>
             </div>
           )}
 
