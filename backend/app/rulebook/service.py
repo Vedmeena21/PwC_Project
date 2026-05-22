@@ -54,15 +54,34 @@ def get_rulebook_by_id(version_id: str) -> Optional[RulebookVersion]:
 
 
 # ── Read: all versions ordered newest first ───────────────────────────────────
+# Fetches every version + every rule in two queries, then assembles in-memory.
+# Replaces a previous N+1 implementation that did one query per version.
 def list_rulebook_versions() -> List[RulebookVersion]:
     db = get_supabase()
-    res = (
+    versions_res = (
         db.table("rulebook_versions")
         .select("*")
         .order("version", desc=True)
         .execute()
     )
-    return [_assemble_version(row) for row in res.data]
+    if not versions_res.data:
+        return []
+
+    version_ids = [v["id"] for v in versions_res.data]
+    rules_res = (
+        db.table("rulebook_rules")
+        .select("*")
+        .in_("version_id", version_ids)
+        .execute()
+    )
+    rules_by_version: dict = {}
+    for r in rules_res.data:
+        rules_by_version.setdefault(r["version_id"], []).append(RuleEntry(**r))
+
+    return [
+        RulebookVersion(**{**v, "rules": rules_by_version.get(v["id"], [])})
+        for v in versions_res.data
+    ]
 
 
 # ── Write: create a new version ───────────────────────────────────────────────

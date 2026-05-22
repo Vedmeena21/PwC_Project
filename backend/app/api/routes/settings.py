@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException
@@ -48,7 +49,7 @@ async def update_recipients(body: RecipientUpdate):
     db = get_supabase()
     db.table("app_settings").update({
         "value":      json.dumps(body.recipients),  # persist as JSON array string
-        "updated_at": "now()",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }).eq("key", "notification_recipients").execute()
     return {"recipients": body.recipients, "message": "Recipients updated"}
 
@@ -61,5 +62,8 @@ async def update_setting(key: str, body: SettingUpdate):
     if key not in EDITABLE_KEYS:
         raise HTTPException(status_code=400, detail=f"Unknown or non-editable key: {key}")
     db = get_supabase()
-    db.table("app_settings").update({"value": body.value}).eq("key", key).execute()
+    db.table("app_settings").update({
+        "value": body.value,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("key", key).execute()
     return {"key": key, "value": body.value}

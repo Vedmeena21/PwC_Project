@@ -209,12 +209,29 @@ def _file_to_text(file_bytes: bytes, filename: str) -> str:
 
 
 # ── Parse Groq JSON response ──────────────────────────────────────────────────
-# Groq may wrap JSON in markdown fences — regex finds the first {...} block.
+# Groq may wrap JSON in ```json fences, prefix with chatter, or add a trailing
+# note. We strip fences first, then find the outermost balanced {...} block.
 def _parse_json(content: str) -> dict:
-    match = re.search(r'\{.*\}', content, re.DOTALL)
-    if not match:
+    text = content.strip()
+
+    # Strip markdown code fences if present
+    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fence:
+        return json.loads(fence.group(1))
+
+    # Fall back to balanced-brace scan to capture the outermost JSON object
+    start = text.find("{")
+    if start == -1:
         raise ValueError("Groq response contained no JSON object")
-    return json.loads(match.group())
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return json.loads(text[start : i + 1])
+    raise ValueError("Groq response had unbalanced JSON braces")
 
 
 # ── Main extraction entry point ───────────────────────────────────────────────

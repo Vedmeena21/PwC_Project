@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils'
 // ── Supported formats ─────────────────────────────────────────────────────────
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.json', '.txt', '.csv']
 const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(',')
+const MAX_FILE_MB = 10
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
 
 // Map extension to display label and icon colour
 const FILE_META = {
@@ -41,6 +43,14 @@ export default function UploadZone({ onUpload, uploading }) {
     if (!f) return
     if (!isSupported(f)) {
       setError(`"${f.name}" is not supported. Use PDF, Word, Excel, JSON, TXT or CSV.`)
+      return
+    }
+    if (f.size > MAX_FILE_BYTES) {
+      setError(`"${f.name}" is ${(f.size / 1024 / 1024).toFixed(1)} MB — max ${MAX_FILE_MB} MB.`)
+      return
+    }
+    if (f.size === 0) {
+      setError(`"${f.name}" is empty.`)
       return
     }
     setError(null)
@@ -117,7 +127,7 @@ export default function UploadZone({ onUpload, uploading }) {
                 <span className="hidden md:inline">Drop file here or </span>
                 <span className="text-brand-600 font-semibold">tap to browse</span>
               </p>
-              <p className="text-xs text-slate-400 mt-1">PDF · Word · Excel · JSON · TXT · CSV</p>
+              <p className="text-xs text-slate-400 mt-1">PDF · Word · Excel · JSON · TXT · CSV · Max {MAX_FILE_MB} MB</p>
             </div>
           </>
         )}

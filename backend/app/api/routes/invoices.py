@@ -53,7 +53,13 @@ def _process_invoice(invoice_id: str, file_bytes: bytes, filename: str = "invoic
         # Stage 2.5 — duplicate detection: if another invoice already exists with
         # the same (invoice_number, vendor_name), flag this one immediately.
         # Prevents double-payment / re-submission fraud.
-        if extracted.invoice_number and extracted.vendor_name:
+        # Skip if extraction returned the placeholder values — those aren't real numbers.
+        placeholder_numbers = {"UNKNOWN", "", None}
+        placeholder_vendors = {"Unknown Vendor", "", None}
+        if (
+            extracted.invoice_number not in placeholder_numbers
+            and extracted.vendor_name not in placeholder_vendors
+        ):
             dup = (
                 db.table("invoices")
                 .select("id")

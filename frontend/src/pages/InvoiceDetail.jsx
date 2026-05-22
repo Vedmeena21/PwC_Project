@@ -232,7 +232,7 @@ export default function InvoiceDetail() {
           </div>
 
           {/* Source file — fetches a fresh short-lived signed URL on click */}
-          {invoice?.pdf_path && (
+          {invoice && (
             <div className="card p-5">
               <h2 className="text-sm font-semibold text-slate-900 mb-3">Source Document</h2>
               <button onClick={openSourceFile} className="btn-secondary w-full justify-center">

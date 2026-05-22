@@ -2,9 +2,25 @@ import { useState, useEffect } from 'react'
 import { Mail, Bell, Plus, Trash2, Save, Lock, X, UserCheck } from 'lucide-react'
 import { settingsApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
-import { UserLoginModal, AUTHORISED_USERS } from '@/components/ui/PasswordGate'
+import PasswordGate, {
+  UserLoginModal, AUTHORISED_USERS, isSettingsAuthenticated,
+} from '@/components/ui/PasswordGate'
 
 export default function Settings() {
+  const [unlocked, setUnlocked] = useState(isSettingsAuthenticated())
+  if (!unlocked) {
+    return (
+      <PasswordGate
+        title="Settings"
+        subtitle="Enter the manager password to view and edit settings"
+        onUnlock={() => setUnlocked(true)}
+      />
+    )
+  }
+  return <SettingsInner />
+}
+
+function SettingsInner() {
   const toast = useToast()
 
   const [recipients,       setRecipients]       = useState([])

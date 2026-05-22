@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,10 +18,11 @@ const ICON_COLORS = { success: 'text-green-600', error: 'text-red-600', info: 't
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
+  const idRef = useRef(0)
 
   // Add a toast and auto-remove after `duration` ms
   const toast = useCallback(({ type = 'info', message, duration = 4000 }) => {
-    const id = Date.now()  // unique key — Date.now() is sufficient for sequential toasts
+    const id = ++idRef.current
     setToasts((prev) => [...prev, { id, type, message }])
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), duration)
   }, [])
