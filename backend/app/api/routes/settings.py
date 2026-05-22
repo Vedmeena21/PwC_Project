@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.core.database import get_supabase
+from app.core.config import get_supabase
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

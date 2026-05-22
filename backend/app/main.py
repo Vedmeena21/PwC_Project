@@ -1,11 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import get_settings
 from app.api.routes import invoices, rulebook, settings
-
-# Load settings once at startup (cached via lru_cache in config.py)
-settings_obj = get_settings()
 
 app = FastAPI(
     title="Invoice Approval System",
@@ -16,9 +12,7 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-# Allow the Vite dev server and the deployed Vercel frontend.
-# Credentials are not used (no cookies), but allow_credentials=True is kept
-# for future auth extension compatibility.
+# Open CORS — no cookies or auth headers cross origins, so credentials are off.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

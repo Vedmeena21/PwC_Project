@@ -6,7 +6,7 @@ import csv
 from groq import Groq
 
 from app.core.config import get_settings
-from app.models.invoice import ExtractedInvoiceData, LineItemExtracted
+from app.models import ExtractedInvoiceData, LineItemExtracted
 
 
 # ── Groq extraction prompt ────────────────────────────────────────────────────

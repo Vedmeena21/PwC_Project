@@ -1,6 +1,6 @@
 from typing import List, Optional
-from app.core.database import get_supabase
-from app.models.rulebook import (
+from app.core.config import get_supabase
+from app.models import (
     RulebookVersion, RuleEntry,
     RulebookCreateRequest, RulebookDiffResult, RuleDiff,
 )

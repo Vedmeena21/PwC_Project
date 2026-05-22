@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FileText, Search, RefreshCw, Upload } from 'lucide-react'
-import { useInvoices } from '@/hooks/useInvoices'
+import { useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'

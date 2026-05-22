@@ -1,5 +1,5 @@
 from typing import List, Optional
-from app.models.invoice import (
+from app.models import (
     ExtractedInvoiceData, ValidationCheck,
     InvoiceRecommendation, Verdict, Confidence,
 )

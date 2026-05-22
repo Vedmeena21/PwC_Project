@@ -5,9 +5,9 @@ from app.rulebook.service import (
     create_rulebook_version, activate_rulebook,
     diff_rulebook_versions, get_active_rulebook,
 )
-from app.models.rulebook import RulebookCreateRequest
+from app.models import RulebookCreateRequest
 from app.notifications.email import send_rulebook_updated_email
-from app.core.database import get_supabase
+from app.core.config import get_supabase
 
 router = APIRouter(prefix="/rulebook", tags=["rulebook"])
 

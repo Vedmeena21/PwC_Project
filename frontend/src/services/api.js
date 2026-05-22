@@ -2,8 +2,8 @@ import axios from 'axios'
 
 // ── Axios instance ────────────────────────────────────────────────────────────
 // In dev the Vite proxy forwards /api → localhost:8000.
-// In production use the hardcoded Render URL (no env var needed on Vercel Hobby).
-const PROD_URL = 'https://pwc-project-ld7g.onrender.com/api'
+// In production reads VITE_API_URL; falls back to the deployed Render URL.
+const PROD_URL = import.meta.env.VITE_API_URL || 'https://pwc-project-ld7g.onrender.com/api'
 const baseURL  = import.meta.env.DEV ? '/api' : PROD_URL
 
 const api = axios.create({

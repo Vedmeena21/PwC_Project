@@ -3,15 +3,15 @@ import resend
 from typing import List
 
 from app.core.config import get_settings
-from app.models.rulebook import RulebookDiffResult
-from app.models.invoice import InvoiceRecommendation
+from app.models import RulebookDiffResult
+from app.models import InvoiceRecommendation
 
 
 # ── Shared: fetch notification recipients from DB ─────────────────────────────
 # Recipients are stored as a JSON array in app_settings so they can be
 # updated via the Settings UI without a redeployment.
 def _get_recipients() -> List[str]:
-    from app.core.database import get_supabase  # local import avoids circular dep
+    from app.core.config import get_supabase  # local import avoids circular dep
     db = get_supabase()
     res = (
         db.table("app_settings")

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Mail, Bell, Plus, Trash2, Save, Lock } from 'lucide-react'
+import { Mail, Bell, Plus, Trash2, Save, Lock, X, UserCheck } from 'lucide-react'
 import { settingsApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
-import { UserLoginModal } from '@/components/ui/PasswordGate'
+import { UserLoginModal, AUTHORISED_USERS } from '@/components/ui/PasswordGate'
 
 export default function Settings() {
   const toast = useToast()
 
   const [recipients,       setRecipients]       = useState([])
-  const [newEmail,         setNewEmail]          = useState('')
+  const [showAddModal,     setShowAddModal]      = useState(false)
   const [notifyOnFlag,     setNotifyOnFlag]      = useState(true)
   const [notifyOnRulebook, setNotifyOnRulebook]  = useState(true)
   const [loading,          setLoading]           = useState(true)
@@ -26,12 +26,10 @@ export default function Settings() {
       .finally(() => setLoading(false))
   }, [])
 
-  const addEmail = () => {
-    const email = newEmail.trim().toLowerCase()
-    if (!email || !email.includes('@')) { toast({ type: 'error', message: 'Enter a valid email address' }); return }
-    if (recipients.includes(email))     { toast({ type: 'error', message: 'Already in list' }); return }
+  const addRecipient = (email) => {
+    if (recipients.includes(email)) { toast({ type: 'error', message: 'Already in list' }); return }
     setRecipients(r => [...r, email])
-    setNewEmail('')
+    setShowAddModal(false)
   }
 
   const removeEmail = (email) => setRecipients(r => r.filter(e => e !== email))
@@ -71,6 +69,55 @@ export default function Settings() {
         />
       )}
 
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in px-4">
+          <div className="card p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Add Recipient</h3>
+                  <p className="text-xs text-slate-500">Select a verified manager to add</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {AUTHORISED_USERS.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">No authorised users configured.<br/>Set VITE_USER* env vars to add users.</p>
+              ) : (
+                AUTHORISED_USERS.map(u => (
+                  <button
+                    key={u.email}
+                    onClick={() => addRecipient(u.email)}
+                    disabled={recipients.includes(u.email)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors
+                      ${recipients.includes(u.email)
+                        ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                        : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50 cursor-pointer'}`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
+                      {u.name ? u.name[0].toUpperCase() : u.email[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{u.name || u.email}</p>
+                      <p className="text-xs text-slate-400 truncate">{u.email}</p>
+                    </div>
+                    {recipients.includes(u.email) && (
+                      <span className="ml-auto text-xs text-slate-400 flex-shrink-0">Added</span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
         <p className="text-slate-500 text-sm mt-1">Configure notifications and system preferences</p>
@@ -84,18 +131,10 @@ export default function Settings() {
         </div>
         <p className="text-xs text-slate-500">These addresses receive all system notifications (flagged invoices, rulebook updates).</p>
 
-        <div className="flex gap-2">
-          <input
-            className="input flex-1"
-            placeholder="name@company.com"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addEmail()}
-          />
-          <button onClick={addEmail} className="btn-primary px-3">
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
+        <button onClick={() => setShowAddModal(true)} className="btn-primary w-full sm:w-auto justify-center">
+          <Plus className="w-4 h-4" />
+          Add Recipient
+        </button>
 
         {recipients.length === 0 ? (
           <p className="text-xs text-slate-400 text-center py-3">No recipients added yet</p>

@@ -3,7 +3,7 @@ import {
   BookOpen, Plus, CheckCircle, ArrowRight,
   ChevronDown, ChevronUp, Zap, GitCompare,
 } from 'lucide-react'
-import { useRulebookVersions, useActiveRulebook } from '@/hooks/useRulebook'
+import { useRulebookVersions, useActiveRulebook } from '@/hooks/useApi'
 import { rulebookApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import { UserLoginModal } from '@/components/ui/PasswordGate'

@@ -3,13 +3,13 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 
-from app.core.database import get_supabase
+from app.core.config import get_supabase
 from app.core.config import get_settings
 from app.extraction.extractor import extract_invoice_data, SUPPORTED_EXTENSIONS
 from app.validation.engine import validate_invoice
 from app.rulebook.service import get_active_rulebook
 from app.notifications.email import send_invoice_flagged_email
-from app.models.invoice import ReviewAction
+from app.models import ReviewAction
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 

@@ -4,7 +4,7 @@ import {
   ArrowLeft, CheckCircle, XCircle, AlertCircle,
   Clock, FileText, ChevronDown, ChevronUp, User, Calendar, Hash,
 } from 'lucide-react'
-import { useInvoice } from '@/hooks/useInvoices'
+import { useInvoice } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
