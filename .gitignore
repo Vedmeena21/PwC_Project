@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Environment — never commit real keys
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+frontend/dist/
+.cache/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Supabase local
+supabase/.temp/

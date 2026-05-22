@@ -1,0 +1,48 @@
+{
+  "invoice": {
+    "invoice_number": "INV-2025-006",
+    "invoice_date": "2025-05-19",
+    "po_reference": "PO-PWC-4426",
+    "vendor": {
+      "name": "SAIL Steel Distributors Pvt. Ltd.",
+      "email": "invoices@sailsteel.com",
+      "gstin": "07AABCS4567F1ZU",
+      "address": "Dwarka Sector 10, New Delhi - 110075"
+    },
+    "bill_to": {
+      "name": "PwC Infrastructure Division",
+      "address": "BKC, Mumbai - 400051"
+    },
+    "line_items": [
+      {
+        "sequence": 1,
+        "description": "Steel Plate IS2062 E350 - 12mm thickness",
+        "quantity": 25,
+        "quantity_unit": "MT",
+        "unit_rate": 52000,
+        "rate_unit": "INR/MT",
+        "total_value": 1300000,
+        "quality_grade": "IS2062 E350",
+        "dimensions": { "thickness": 12, "unit": "mm" }
+      },
+      {
+        "sequence": 2,
+        "description": "Steel Plate IS2062 E350 - 16mm thickness",
+        "quantity": 15,
+        "quantity_unit": "MT",
+        "unit_rate": 52000,
+        "rate_unit": "INR/MT",
+        "total_value": 780000,
+        "quality_grade": "IS2062 E350",
+        "dimensions": { "thickness": 16, "unit": "mm" }
+      }
+    ],
+    "subtotal": 2080000,
+    "gst_percent": 18,
+    "gst_amount": 374400,
+    "grand_total": 2454400,
+    "payment_terms": "Net 30 days",
+    "bank_account": "0987654321",
+    "ifsc": "SBIN0012345"
+  }
+}

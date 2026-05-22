@@ -1,0 +1,15 @@
+Invoice Number,INV-2025-008,,,,
+Invoice Date,2025-05-20,,,,
+PO Reference,PO-PWC-4428,,,,
+Vendor Name,National Steel Corp. Pvt. Ltd.,,,,
+Vendor Email,billing@nationalsteel.com,,,,
+GSTIN,08AABCN6789H1ZS,,,,
+,,,,,,
+Line Item,Description,Quantity (MT),Unit Rate (INR/MT),Total (INR),Quality Grade
+1,Steel Rod IS2062 E250 Dia 12mm,50,45000,2250000,IS2062 E250
+2,Steel Plate IS2062 E350 10mm,20,52000,1040000,IS2062 E350
+3,OPC 53 Grade Cement,100,6200,620000,OPC53
+,,,,,,
+,Subtotal,,, 3910000,
+,GST 18%,,,703800,
+,Grand Total,,,4613800,

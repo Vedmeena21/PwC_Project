@@ -1,0 +1,46 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import get_settings
+from app.api.routes import invoices, rulebook, settings
+
+# Load settings once at startup (cached via lru_cache in config.py)
+settings_obj = get_settings()
+
+app = FastAPI(
+    title="Invoice Approval System",
+    description="Automated invoice parsing, validation, and approval recommendation engine",
+    version="1.0.0",
+    docs_url="/docs",    # Swagger UI — useful for manual testing and exploration
+    redoc_url="/redoc",  # ReDoc alternative view
+)
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# Allow the Vite dev server and the deployed Vercel frontend.
+# Credentials are not used (no cookies), but allow_credentials=True is kept
+# for future auth extension compatibility.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Route registration ────────────────────────────────────────────────────────
+# All routes are prefixed with /api so the Vite proxy can forward them cleanly.
+app.include_router(invoices.router, prefix="/api")
+app.include_router(rulebook.router, prefix="/api")
+app.include_router(settings.router, prefix="/api")
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+# Pinged by UptimeRobot every 5 minutes to keep the Render free instance warm.
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/")
+async def root():
+    return {"message": "Invoice Approval System API", "version": "1.0.0", "docs": "/docs"}
