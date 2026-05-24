@@ -22,7 +22,10 @@ api.interceptors.response.use(
     if (typeof detail === 'string') message = detail
     else if (Array.isArray(detail)) message = detail.map(d => d.msg || JSON.stringify(d)).join(', ')
     else if (detail && typeof detail === 'object') message = JSON.stringify(detail)
-    else if (err.message) message = err.message
+    else if (err.message && err.message !== 'Network Error') message = err.message
+    // Network Error = no response at all (backend cold-starting or CORS preflight failed)
+    if (!err.response && (err.message === 'Network Error' || err.code === 'ERR_NETWORK'))
+      message = 'Cannot reach the server — it may be waking up. Please wait a moment and try again.'
     if (err.code === 'ECONNABORTED') message = 'Request timed out — the backend may be cold-starting. Try again.'
     if (err.response?.status === 413) message = 'File is too large (max 10 MB).'
     if (err.response?.status === 404) message = detail || 'Not found.'
