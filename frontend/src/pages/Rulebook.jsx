@@ -5,8 +5,8 @@ import {
 } from 'lucide-react'
 import { useRulebookVersions, useActiveRulebook } from '@/hooks/useApi'
 import { rulebookApi } from '@/services/api'
+import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
-import { UserLoginModal } from '@/components/ui/PasswordGate'
 import { formatDateTime, cn } from '@/lib/utils'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -29,7 +29,6 @@ const emptyRule = () => ({
 })
 
 // ── DiffView ──────────────────────────────────────────────────────────────────
-// Shows older (from) → newer (to) with both labels. onClose dismisses the panel.
 const DiffView = ({ diff, onClose }) => {
   if (!diff) return null
 
@@ -39,7 +38,6 @@ const DiffView = ({ diff, onClose }) => {
     modified: { color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200',  label: 'CHANGED' },
   }
 
-  // from_label is added by the backend; fall back to integer if an older response is cached
   const fromTitle = diff.from_label ? `${diff.from_label} v${diff.from_version}` : `Version ${diff.from_version}`
   const toTitle   = `${diff.label} v${diff.to_version}`
 
@@ -89,12 +87,8 @@ const DiffView = ({ diff, onClose }) => {
                       <span className="text-green-700 font-semibold">{c.new_value} {c.new_unit}</span>
                     </div>
                   )}
-                  {c.change_type === 'added' && (
-                    <p className="text-xs text-green-700 mt-1">{c.new_value} {c.new_unit}</p>
-                  )}
-                  {c.change_type === 'removed' && (
-                    <p className="text-xs text-red-600 mt-1 line-through">{c.old_value} {c.old_unit}</p>
-                  )}
+                  {c.change_type === 'added'   && <p className="text-xs text-green-700 mt-1">{c.new_value} {c.new_unit}</p>}
+                  {c.change_type === 'removed' && <p className="text-xs text-red-600 mt-1 line-through">{c.old_value} {c.old_unit}</p>}
                 </div>
               </div>
             )
@@ -132,13 +126,9 @@ const RulesTable = ({ rules }) => (
 )
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-// Rulebook is viewable by anyone. Auth only required for create / activate.
 export default function Rulebook() {
-  return <RulebookInner />
-}
-
-function RulebookInner() {
-  const toast = useToast()
+  const toast               = useToast()
+  const { isAdmin, user }   = useAuth()
   const { versions, loading, refetch } = useRulebookVersions()
   const { rulebook: active }           = useActiveRulebook()
 
@@ -147,39 +137,29 @@ function RulebookInner() {
   const [diff,        setDiff]        = useState(null)
   const [diffLoading, setDiffLoading] = useState(false)
   const [activating,  setActivating]  = useState(null)
+  const [creating,    setCreating]    = useState(false)
 
-  // pendingAction: a function(user) to call after re-auth modal confirms
-  const [pendingAction, setPendingAction] = useState(null)
-
-  const [form,     setForm]     = useState({ label: '', notes: '', created_by: '', rules: [emptyRule()] })
-  const [creating, setCreating] = useState(false)
+  const [form, setForm] = useState({
+    label: '', notes: '', created_by: user?.name || user?.email || '', rules: [emptyRule()]
+  })
 
   const addRule    = () => setForm(f => ({ ...f, rules: [...f.rules, emptyRule()] }))
   const removeRule = (i) => setForm(f => ({ ...f, rules: f.rules.filter((_, idx) => idx !== i) }))
   const updateRule = (i, field, value) =>
     setForm(f => ({ ...f, rules: f.rules.map((r, idx) => idx === i ? { ...r, [field]: value } : r) }))
 
-  // Always re-prompt credentials before any write action
-  const requireAuth = (action) => setPendingAction(() => action)
-
-  const onReAuthSuccess = (user) => {
-    const action = pendingAction
-    setPendingAction(null)
-    if (action) action(user)
-  }
-
   // ── Create ────────────────────────────────────────────────────────────────
-  const handleCreate = async (user) => {
+  const handleCreate = async () => {
     if (!form.label) { toast({ type: 'error', message: 'Rulebook name is required' }); return }
     if (form.rules.some(r => !r.rule_key || !r.rule_value)) {
       toast({ type: 'error', message: 'All rules must have a key and value' }); return
     }
     setCreating(true)
     try {
-      await rulebookApi.create({ ...form, created_by: user.name })
-      toast({ type: 'success', message: `Rulebook version created by ${user.name}` })
+      await rulebookApi.create({ ...form, created_by: form.created_by || user?.name || 'admin' })
+      toast({ type: 'success', message: 'Rulebook version created' })
       setShowCreate(false)
-      setForm({ label: '', notes: '', created_by: user.name, rules: [emptyRule()] })
+      setForm({ label: '', notes: '', created_by: user?.name || '', rules: [emptyRule()] })
       refetch()
     } catch (e) {
       toast({ type: 'error', message: e.message })
@@ -189,11 +169,11 @@ function RulebookInner() {
   }
 
   // ── Activate ──────────────────────────────────────────────────────────────
-  const handleActivate = async (id, user) => {
+  const handleActivate = async (id) => {
     setActivating(id)
     try {
-      await rulebookApi.activate(id, user.name)
-      toast({ type: 'success', message: `Activated by ${user.name}. Team will be notified.` })
+      await rulebookApi.activate(id, user?.name || 'admin')
+      toast({ type: 'success', message: 'Activated. Team will be notified.' })
       refetch()
     } catch (e) {
       toast({ type: 'error', message: e.message })
@@ -216,30 +196,22 @@ function RulebookInner() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Re-auth modal for write actions */}
-      {pendingAction && (
-        <UserLoginModal
-          title="Confirm Identity"
-          subtitle="Re-enter your credentials to proceed"
-          onLogin={onReAuthSuccess}
-          onCancel={() => setPendingAction(null)}
-        />
-      )}
-
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900">Rulebook</h1>
           <p className="text-slate-500 text-sm mt-1">Manage and version approval criteria</p>
         </div>
-        <button
-          onClick={() => requireAuth((user) => { setShowCreate(true); setForm(f => ({ ...f, created_by: user.name })) })}
-          className="btn-primary flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Version</span>
-          <span className="sm:hidden">New</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="btn-primary flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Version</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        )}
       </div>
 
       {/* ── Active rulebook banner ── */}
@@ -257,8 +229,8 @@ function RulebookInner() {
         </div>
       )}
 
-      {/* ── Create form ── */}
-      {showCreate && (
+      {/* ── Create form (admin only) ── */}
+      {isAdmin && showCreate && (
         <div className="card p-6 animate-slide-up space-y-5">
           <h2 className="text-sm font-semibold text-slate-900">Create New Rulebook Version</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -317,7 +289,7 @@ function RulebookInner() {
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={() => requireAuth((user) => handleCreate(user))} disabled={creating} className="btn-primary">
+            <button onClick={handleCreate} disabled={creating} className="btn-primary">
               {creating ? 'Creating…' : 'Create Version'}
             </button>
             <button onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
@@ -334,10 +306,10 @@ function RulebookInner() {
         ) : versions.length === 0 ? (
           <div className="card p-8 text-center">
             <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">No rulebook versions yet. Create one above.</p>
+            <p className="text-slate-500 text-sm">No rulebook versions yet. {isAdmin ? 'Create one above.' : 'Contact an admin.'}</p>
           </div>
         ) : (
-          versions.map((v, idx) => (
+          versions.map((v) => (
             <div key={v.id} className={cn('card overflow-hidden', v.is_active && 'border-green-300')}>
               <div className="flex items-start gap-3 px-4 md:px-5 py-4">
                 <div className="flex-1 min-w-0">
@@ -351,17 +323,16 @@ function RulebookInner() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {!v.is_active && (
+                  {isAdmin && !v.is_active && (
                     <>
                       <button
-                        onClick={() => requireAuth((user) => handleActivate(v.id, user))}
+                        onClick={() => handleActivate(v.id)}
                         disabled={activating === v.id}
                         className="btn-secondary text-xs py-1.5 px-2.5"
                       >
                         <Zap className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">{activating === v.id ? 'Activating…' : 'Activate'}</span>
                       </button>
-                      {/* Diff against the currently active rulebook — direction: this (older) → active (newer). */}
                       {active && active.id !== v.id && (
                         <button onClick={() => handleDiff(v.id, active.id)}
                           disabled={diffLoading} className="btn-secondary text-xs py-1.5 px-2.5">

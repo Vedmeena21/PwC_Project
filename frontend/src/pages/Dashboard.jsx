@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight } from 'lucide-react'
+import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, Eye } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useStats, useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
+import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import UploadZone from '@/components/ui/UploadZone'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -219,11 +220,16 @@ function StatCard({ icon: Icon, label, value, color, sub, filterStatus }) {
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate()
-  const toast    = useToast()
+  const navigate      = useNavigate()
+  const toast         = useToast()
+  const { isAdmin }   = useAuth()
 
-  const { stats, loading: statsLoading }           = useStats()
-  const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 6 })
+  // Admin view toggle: 'all' = everyone's invoices, 'mine' = own uploads
+  const [view, setView] = useState('all')
+  const effectiveView   = isAdmin ? view : 'mine'
+
+  const { stats, loading: statsLoading }           = useStats(effectiveView)
+  const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 6, view: effectiveView })
   const [uploading, setUploading]                  = useState(false)
 
   const approvalRate  = stats?.total > 0 ? Math.round((stats.approved / stats.total) * 100) : null
@@ -259,12 +265,37 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 text-sm mt-0.5">Invoice processing overview</p>
         </div>
-        <button
-          onClick={() => navigate('/invoices')}
-          className="hidden md:flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          All invoices <ArrowUpRight className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Admin view toggle */}
+          {isAdmin && (
+            <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-0.5">
+              <button
+                onClick={() => setView('all')}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                  view === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                )}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setView('mine')}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                  view === 'mine' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                )}
+              >
+                Mine
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => navigate('/invoices')}
+            className="hidden md:flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            All invoices <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}

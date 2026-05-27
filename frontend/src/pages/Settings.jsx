@@ -1,31 +1,68 @@
 import { useState, useEffect } from 'react'
-import { Mail, Bell, Plus, Trash2, Save, Lock, X, UserCheck } from 'lucide-react'
+import { Mail, Bell, Plus, Trash2, Save, X, Loader2 } from 'lucide-react'
 import { settingsApi } from '@/services/api'
+import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
-import { UserLoginModal, AUTHORISED_USERS } from '@/components/ui/PasswordGate'
+
+// ── Add-Recipient modal ───────────────────────────────────────────────────────
+// Lets the admin type any email address to add as a notification recipient.
+function AddRecipientModal({ existing, onAdd, onClose }) {
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+
+  function submit(e) {
+    e.preventDefault()
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed.includes('@')) { setError('Enter a valid email address.'); return }
+    if (existing.includes(trimmed)) { setError('Already in the list.'); return }
+    onAdd(trimmed)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div className="card p-6 w-full max-w-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-900">Add Recipient</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Email address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setError('') }}
+              required
+              placeholder="manager@example.com"
+              className="input w-full"
+              autoFocus
+            />
+            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+          </div>
+          <p className="text-xs text-slate-400">
+            This address will receive flagged-invoice alerts and rulebook-update emails.
+          </p>
+          <button type="submit" className="btn-primary w-full justify-center">
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 export default function Settings() {
-  const toast = useToast()
+  const toast    = useToast()
+  const { isAdmin, user } = useAuth()
 
   const [recipients,       setRecipients]       = useState([])
-  const [showAddModal,     setShowAddModal]      = useState(false)
   const [notifyOnFlag,     setNotifyOnFlag]      = useState(true)
   const [notifyOnRulebook, setNotifyOnRulebook]  = useState(true)
   const [loading,          setLoading]           = useState(true)
   const [saving,           setSaving]            = useState(false)
-  const [showAuth,         setShowAuth]          = useState(false)
-  // Gate for Add Recipient: must authenticate before the manager list is revealed.
-  // Otherwise visitors could enumerate authorised manager names + emails just by
-  // clicking the button.
-  const [showAddAuth,      setShowAddAuth]       = useState(false)
-  // Gate for Notification Triggers: toggles are hidden until the user
-  // authenticates — visitors should not see (let alone change) which
-  // notifications are enabled without proving they're a manager.
-  const [triggersUnlocked, setTriggersUnlocked]  = useState(false)
-  const [showTriggersAuth, setShowTriggersAuth]  = useState(false)
-  // Gate for removing a recipient — visitors should not be able to evict
-  // active subscribers without proving they're a manager.
-  const [pendingDelete,    setPendingDelete]     = useState(null)
+  const [showAddModal,     setShowAddModal]       = useState(false)
 
   useEffect(() => {
     Promise.all([settingsApi.getRecipients(), settingsApi.getAll()])
@@ -39,26 +76,15 @@ export default function Settings() {
   }, [])
 
   const addRecipient = (email) => {
-    if (recipients.includes(email)) { toast({ type: 'error', message: 'Already in list' }); return }
     setRecipients(r => [...r, email])
     setShowAddModal(false)
   }
 
-  // Two-step delete: trash icon opens the auth modal; only after a valid
-  // manager login does the recipient get removed from local state.
-  // (Persisted on Save Settings, which also requires re-auth.)
-  const requestRemoveEmail = (email) => setPendingDelete(email)
-
-  const confirmRemoveEmail = () => {
-    setRecipients(r => r.filter(e => e !== pendingDelete))
-    setPendingDelete(null)
+  const removeRecipient = (email) => {
+    setRecipients(r => r.filter(e => e !== email))
   }
 
-  // Save is gated — clicking Save shows auth modal first
-  const handleSaveClick = () => setShowAuth(true)
-
-  const saveAll = async (user) => {
-    setShowAuth(false)
+  const saveAll = async () => {
     setSaving(true)
     try {
       await Promise.all([
@@ -66,7 +92,7 @@ export default function Settings() {
         settingsApi.updateSetting('auto_notify_on_flag',            String(notifyOnFlag)),
         settingsApi.updateSetting('auto_notify_on_rulebook_update', String(notifyOnRulebook)),
       ])
-      toast({ type: 'success', message: `Settings saved by ${user.name}` })
+      toast({ type: 'success', message: `Settings saved` })
     } catch (e) {
       toast({ type: 'error', message: e.message })
     } finally {
@@ -80,89 +106,12 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl w-full">
-      {showAuth && (
-        <UserLoginModal
-          title="Confirm to Save"
-          subtitle="Enter your manager credentials to apply changes"
-          onLogin={saveAll}
-          onCancel={() => setShowAuth(false)}
-        />
-      )}
-
-      {showAddAuth && (
-        <UserLoginModal
-          title="Verify Identity"
-          subtitle="Sign in to view the manager list"
-          onLogin={() => { setShowAddAuth(false); setShowAddModal(true) }}
-          onCancel={() => setShowAddAuth(false)}
-        />
-      )}
-
-      {showTriggersAuth && (
-        <UserLoginModal
-          title="Verify Identity"
-          subtitle="Sign in to view and edit notification triggers"
-          onLogin={() => { setShowTriggersAuth(false); setTriggersUnlocked(true) }}
-          onCancel={() => setShowTriggersAuth(false)}
-        />
-      )}
-
-      {pendingDelete && (
-        <UserLoginModal
-          title="Confirm Removal"
-          subtitle={`Sign in to remove ${pendingDelete} from recipients`}
-          onLogin={confirmRemoveEmail}
-          onCancel={() => setPendingDelete(null)}
-        />
-      )}
-
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in px-4">
-          <div className="card p-6 w-full max-w-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Add Recipient</h3>
-                  <p className="text-xs text-slate-500">Select a verified manager to add</p>
-                </div>
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-2">
-              {AUTHORISED_USERS.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-4">No authorised users configured.<br/>Set VITE_USER* env vars to add users.</p>
-              ) : (
-                AUTHORISED_USERS.map(u => (
-                  <button
-                    key={u.email}
-                    onClick={() => addRecipient(u.email)}
-                    disabled={recipients.includes(u.email)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors
-                      ${recipients.includes(u.email)
-                        ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50 cursor-pointer'}`}
-                  >
-                    <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
-                      {u.name ? u.name[0].toUpperCase() : u.email[0].toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{u.name || u.email}</p>
-                      <p className="text-xs text-slate-400 truncate">{u.email}</p>
-                    </div>
-                    {recipients.includes(u.email) && (
-                      <span className="ml-auto text-xs text-slate-400 flex-shrink-0">Added</span>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        <AddRecipientModal
+          existing={recipients}
+          onAdd={addRecipient}
+          onClose={() => setShowAddModal(false)}
+        />
       )}
 
       <div>
@@ -176,10 +125,10 @@ export default function Settings() {
           <Mail className="w-4 h-4 text-slate-600" />
           <h2 className="text-sm font-semibold text-slate-900">Notification Recipients</h2>
         </div>
-        <p className="text-xs text-slate-500">These addresses receive all system notifications (flagged invoices, rulebook updates).</p>
+        <p className="text-xs text-slate-500">
+          These addresses receive all system notifications (flagged invoices, rulebook updates).
+        </p>
 
-        {/* Currently-subscribed list — labelled so first-time viewers
-            immediately understand these are active recipients, not examples. */}
         <div className="space-y-2">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
             Currently subscribed{recipients.length > 0 && ` (${recipients.length})`}
@@ -190,100 +139,83 @@ export default function Settings() {
             </p>
           ) : (
             recipients.map((email) => {
-              // Match against the authorised manager list so we can show a
-              // friendly name + role. Falls back gracefully when the email
-              // isn't in AUTHORISED_USERS (e.g. an external accountant).
-              const user = AUTHORISED_USERS.find(
-                u => u.email && u.email.toLowerCase() === email.toLowerCase()
-              )
-              const displayName = user?.name || 'External recipient'
-              const initial     = (user?.name || email)[0].toUpperCase()
+              const initial = email[0].toUpperCase()
               return (
-              <div key={email} className="flex items-start justify-between px-3 py-3 bg-slate-50 rounded-lg">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
-                    {initial}
+                <div key={email} className="flex items-start justify-between px-3 py-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
+                      {initial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{email}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Receives flagged-invoice alerts &amp; rulebook-update emails
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                    <p className="text-xs text-slate-600 truncate flex items-center gap-1">
-                      <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                      {email}
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Receives flagged-invoice alerts & rulebook-update emails
-                    </p>
-                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => removeRecipient(email)}
+                      className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2 mt-0.5"
+                      aria-label={`Remove ${email}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => requestRemoveEmail(email)}
-                  className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2 mt-0.5"
-                  aria-label={`Remove ${email}`}
-                  title="Remove recipient (requires manager login)"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
               )
             })
           )}
         </div>
 
-        <button onClick={() => setShowAddAuth(true)} className="btn-primary w-full sm:w-auto justify-center">
-          <Plus className="w-4 h-4" />
-          Add Recipient
-        </button>
+        {isAdmin && (
+          <button onClick={() => setShowAddModal(true)} className="btn-primary w-full sm:w-auto justify-center">
+            <Plus className="w-4 h-4" />
+            Add Recipient
+          </button>
+        )}
       </div>
 
-      {/* ── Notification toggles (gated) ── */}
+      {/* ── Notification toggles ── */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-slate-600" />
           <h2 className="text-sm font-semibold text-slate-900">Notification Triggers</h2>
         </div>
 
-        {!triggersUnlocked ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
-            <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center">
-              <Lock className="w-4 h-4 text-slate-500" />
-            </div>
+        {[
+          { label: 'Invoice Flagged',  description: 'Send email when an invoice fails validation checks',        value: notifyOnFlag,     set: setNotifyOnFlag     },
+          { label: 'Rulebook Updated', description: 'Send diff email when a new rulebook version is activated',  value: notifyOnRulebook, set: setNotifyOnRulebook },
+        ].map(({ label, description, value, set }) => (
+          <div key={label} className="flex items-start justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
             <div>
-              <p className="text-sm font-medium text-slate-700">Sign in to view triggers</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Notification triggers are visible only to authorised managers
-              </p>
+              <p className="text-sm font-medium text-slate-900">{label}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{description}</p>
             </div>
-            <button onClick={() => setShowTriggersAuth(true)} className="btn-primary">
-              <Lock className="w-4 h-4" />
-              Unlock
+            <button
+              onClick={() => isAdmin && set(v => !v)}
+              disabled={!isAdmin}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
+                value ? 'bg-slate-900' : 'bg-slate-300'
+              } ${!isAdmin ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${value ? 'translate-x-4' : 'translate-x-1'}`} />
             </button>
           </div>
-        ) : (
-          [
-            { label: 'Invoice Flagged',   description: 'Send email when an invoice fails validation checks',          value: notifyOnFlag,     set: setNotifyOnFlag     },
-            { label: 'Rulebook Updated',  description: 'Send diff email when a new rulebook version is activated',   value: notifyOnRulebook, set: setNotifyOnRulebook },
-          ].map(({ label, description, value, set }) => (
-            <div key={label} className="flex items-start justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
-              <div>
-                <p className="text-sm font-medium text-slate-900">{label}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{description}</p>
-              </div>
-              <button
-                onClick={() => set(v => !v)}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${value ? 'bg-slate-900' : 'bg-slate-300'}`}
-              >
-                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${value ? 'translate-x-4' : 'translate-x-1'}`} />
-              </button>
-            </div>
-          ))
+        ))}
+
+        {!isAdmin && (
+          <p className="text-xs text-slate-400 italic">Only admins can change notification settings.</p>
         )}
       </div>
 
-      {/* Save — triggers auth modal */}
-      <button onClick={handleSaveClick} disabled={saving} className="btn-primary w-full sm:w-auto justify-center">
-        <Lock className="w-4 h-4" />
-        {saving ? 'Saving…' : 'Save Settings'}
-      </button>
+      {/* Save */}
+      {isAdmin && (
+        <button onClick={saveAll} disabled={saving} className="btn-primary w-full sm:w-auto justify-center">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? 'Saving…' : 'Save Settings'}
+        </button>
+      )}
     </div>
   )
 }

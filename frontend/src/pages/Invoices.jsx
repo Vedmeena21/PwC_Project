@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FileText, Search, RefreshCw, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
+import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
 import UploadZone from '@/components/ui/UploadZone'
@@ -13,9 +14,14 @@ const STATUS_FILTERS = ['all', 'pending', 'processing', 'flagged', 'approved', '
 const PAGE_SIZE      = 20
 
 export default function Invoices() {
-  const navigate = useNavigate()
-  const toast    = useToast()
+  const navigate    = useNavigate()
+  const toast       = useToast()
+  const { isAdmin } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Admin view toggle: 'all' = everyone's, 'mine' = own uploads
+  const [view, setView] = useState('all')
+  const effectiveView   = isAdmin ? view : 'mine'
 
   const [statusFilter, setStatusFilter] = useState(() => {
     const s = searchParams.get('status')
@@ -43,6 +49,7 @@ export default function Invoices() {
   const apiParams = {
     limit:  PAGE_SIZE,
     offset: page * PAGE_SIZE,
+    view:   effectiveView,
     ...(statusFilter !== 'all' && { status: statusFilter }),
     ...(debouncedSearch        && { search: debouncedSearch }),
   }
@@ -82,6 +89,29 @@ export default function Invoices() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Admin view toggle */}
+          {isAdmin && (
+            <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-0.5">
+              <button
+                onClick={() => { setView('all'); setPage(0) }}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                  view === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                )}
+              >
+                All
+              </button>
+              <button
+                onClick={() => { setView('mine'); setPage(0) }}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                  view === 'mine' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                )}
+              >
+                Mine
+              </button>
+            </div>
+          )}
           <button onClick={refetch} className="btn-secondary" title="Refresh">
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
             <span className="hidden sm:inline">Refresh</span>

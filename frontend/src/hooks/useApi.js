@@ -82,16 +82,18 @@ export function useInvoice(id) {
 }
 
 // Fetches per-status invoice counts for the Dashboard stat cards.
-export function useStats() {
+// view: 'all' (admin sees everyone) | 'mine' (own uploads only)
+export function useStats(view = 'all') {
   const [stats,   setStats]   = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    invoiceApi.stats()
+    setLoading(true)
+    invoiceApi.stats({ view })
       .then(setStats)
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [view])
 
   return { stats, loading }
 }
