@@ -246,7 +246,7 @@ def send_rulebook_updated_email(diff: RulebookDiffResult) -> bool:
     <tr>
       <td style="background:#0ea5e9;padding:16px 32px;">
         <p style="margin:0;color:#ffffff;font-size:14px;">
-          Version {diff.from_version} → Version {diff.to_version} &nbsp;·&nbsp;
+          {diff.from_label} v{diff.from_version} → {diff.label} v{diff.to_version} &nbsp;·&nbsp;
           <strong>{diff.total_added}</strong> added &nbsp;·&nbsp;
           <strong>{diff.total_modified}</strong> changed &nbsp;·&nbsp;
           <strong>{diff.total_removed}</strong> removed
