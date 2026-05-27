@@ -186,7 +186,7 @@ export default function Invoices() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3 first:px-6">Invoice</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3 first:px-6">File / Invoice No.</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Vendor</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3 hidden md:table-cell">Date</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3 hidden lg:table-cell">PO Ref</th>
@@ -208,8 +208,12 @@ export default function Invoices() {
                           <FileText className="w-3.5 h-3.5 text-slate-500" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 truncate max-w-[120px] sm:max-w-none">{inv.invoice_number}</p>
-                          <p className="text-xs text-slate-400 sm:hidden truncate">{inv.vendor_name}</p>
+                          <p className="font-medium text-slate-900 truncate max-w-[140px] sm:max-w-none">
+                            {inv.original_filename || inv.invoice_number}
+                          </p>
+                          <p className="text-xs text-slate-400 truncate">
+                            {inv.original_filename ? inv.invoice_number : inv.vendor_name}
+                          </p>
                         </div>
                       </div>
                     </td>

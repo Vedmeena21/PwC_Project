@@ -280,14 +280,19 @@ async def upload_invoice(
     except Exception:
         public_url = ""
 
+    # Strip extension to get a clean display name (e.g. "Invoice_May2026.pdf" → "Invoice_May2026")
+    import os as _os
+    clean_name = _os.path.splitext(file.filename or "")[0] or file_name
+
     # Create the invoice row with placeholder values — extraction fills them in
     invoice_res = db.table("invoices").insert({
-        "invoice_number": f"PENDING-{file_name[:8].upper()}",
-        "vendor_name":    "Processing...",
-        "pdf_path":       storage_path,
-        "pdf_url":        public_url,
-        "status":         "pending",
-        "uploaded_by":    current["id"],
+        "invoice_number":    f"PENDING-{file_name[:8].upper()}",
+        "vendor_name":       "Processing...",
+        "pdf_path":          storage_path,
+        "pdf_url":           public_url,
+        "status":            "pending",
+        "uploaded_by":       current["id"],
+        "original_filename": clean_name,
     }).execute()
 
     invoice_id = invoice_res.data[0]["id"]
