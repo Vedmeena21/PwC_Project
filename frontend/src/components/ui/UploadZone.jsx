@@ -133,15 +133,16 @@ export default function UploadZone({ onUpload, uploading }) {
         )}
       </div>
 
-      {/* Inline error for unsupported file types */}
+      {/* Inline error — shown for oversized or unsupported files */}
       {error && (
-        <p className="text-xs text-red-600 flex items-center gap-1">
-          <X className="w-3 h-3" /> {error}
-        </p>
+        <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+          <X className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
-      {/* Upload button — only shown when a file is staged */}
-      {file && (
+      {/* Upload button — only shown when a valid file is staged */}
+      {file && !error && (
         <button onClick={() => onUpload(file)} disabled={uploading} className="btn-primary w-full justify-center">
           {uploading ? (
             <>

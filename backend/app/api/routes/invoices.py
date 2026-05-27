@@ -231,11 +231,19 @@ async def upload_invoice(
     db       = get_supabase()
     settings = get_settings()
 
-    file_bytes   = await file.read()
+    # Check Content-Length header first (fast path — no body read needed)
+    content_length = file.size  # set by FastAPI from Content-Length header
+    if content_length and content_length > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File is too large ({content_length/1024/1024:.1f} MB). Maximum allowed is {MAX_UPLOAD_BYTES//1024//1024} MB. Please compress the PDF or split it into smaller files.",
+        )
+
+    file_bytes = await file.read()
     if len(file_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large ({len(file_bytes)/1024/1024:.1f} MB). Maximum allowed: {MAX_UPLOAD_BYTES/1024/1024:.0f} MB",
+            detail=f"File is too large ({len(file_bytes)/1024/1024:.1f} MB). Maximum allowed is {MAX_UPLOAD_BYTES//1024//1024} MB. Please compress the PDF or split it into smaller files.",
         )
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="File is empty")

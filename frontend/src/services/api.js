@@ -41,7 +41,7 @@ api.interceptors.response.use(
     if (!err.response && (err.message === 'Network Error' || err.code === 'ERR_NETWORK'))
       message = 'Cannot reach the server — it may be waking up. Please wait a moment and try again.'
     if (err.code === 'ECONNABORTED') message = 'Request timed out — the backend may be cold-starting. Try again.'
-    if (err.response?.status === 413) message = 'File is too large (max 10 MB).'
+    if (err.response?.status === 413) message = detail || 'File is too large — maximum allowed is 10 MB.'
     if (err.response?.status === 404) message = detail || 'Not found.'
 
     // 401 = expired / invalid JWT → force re-login
