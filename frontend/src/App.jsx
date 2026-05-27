@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
 import ProtectedRoute   from '@/components/auth/ProtectedRoute'
 import Layout           from '@/components/layout/Layout'
@@ -11,9 +11,17 @@ import Settings         from '@/pages/Settings'
 import Manage           from '@/pages/Manage'
 import { ToastProvider } from '@/components/ui/Toast'
 
-// ── App ───────────────────────────────────────────────────────────────────────
-// Root component. AuthProvider wraps everything so any component can call
-// useAuth(). Protected routes redirect to /login when unauthenticated.
+// Wraps all authenticated pages: checks login then renders Layout + child page
+function AuthLayout() {
+  return (
+    <ProtectedRoute>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </ProtectedRoute>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -23,34 +31,16 @@ export default function App() {
             {/* Public */}
             <Route path="/login" element={<Login />} />
 
-            {/* Protected — all wrapped in Layout */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route path="/"               element={<Dashboard />} />
-                      <Route path="/invoices"       element={<Invoices />} />
-                      <Route path="/invoices/:id"   element={<InvoiceDetail />} />
-                      <Route path="/rulebook"       element={<Rulebook />} />
-                      <Route path="/settings"       element={<Settings />} />
-                      {/* Admin only */}
-                      <Route
-                        path="/manage"
-                        element={
-                          <ProtectedRoute adminOnly>
-                            <Manage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      {/* Catch-all */}
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Protected — all share AuthLayout (ProtectedRoute + Layout) */}
+            <Route element={<AuthLayout />}>
+              <Route index                element={<Dashboard />} />
+              <Route path="invoices"      element={<Invoices />} />
+              <Route path="invoices/:id"  element={<InvoiceDetail />} />
+              <Route path="rulebook"      element={<Rulebook />} />
+              <Route path="settings"      element={<Settings />} />
+              <Route path="manage"        element={<ProtectedRoute adminOnly><Manage /></ProtectedRoute>} />
+              <Route path="*"             element={<Navigate to="/" replace />} />
+            </Route>
           </Routes>
         </ToastProvider>
       </AuthProvider>
