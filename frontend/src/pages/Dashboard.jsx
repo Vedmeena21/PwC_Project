@@ -249,7 +249,7 @@ export default function Dashboard() {
   const effectiveView   = isAdmin ? view : 'mine'
 
   const { stats, loading: statsLoading }           = useStats(effectiveView)
-  const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 6, view: effectiveView })
+  const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 5, view: effectiveView })
   const [uploading,  setUploading]  = useState(false)
   const [activity,   setActivity]   = useState([])
   const [actLoading, setActLoading] = useState(true)
@@ -440,7 +440,10 @@ export default function Dashboard() {
           <h2 className="text-sm font-semibold text-slate-900">Recent Invoices</h2>
           <button
             onClick={() => navigate('/invoices')}
-            className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-0.5"
+            className="text-xs font-medium flex items-center gap-0.5 transition-colors"
+            style={{ color: '#EB8C00' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#D04A02'}
+            onMouseLeave={e => e.currentTarget.style.color = '#EB8C00'}
           >
             View all <ChevronRight className="w-3.5 h-3.5" />
           </button>

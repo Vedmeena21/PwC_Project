@@ -11,7 +11,7 @@ import { InvoiceRowSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
 
 const STATUS_FILTERS = ['all', 'pending', 'processing', 'flagged', 'approved', 'rejected', 'extraction_failed']
-const PAGE_SIZE      = 20
+const PAGE_SIZE      = 10
 
 export default function Invoices() {
   const navigate    = useNavigate()
