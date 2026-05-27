@@ -47,7 +47,7 @@ export default function Login() {
           email,
           password,
           name:        name.trim() || undefined,
-          signup_note: note.trim() || undefined,
+          note: note.trim() || undefined,
         })
         setPending(true)
       }

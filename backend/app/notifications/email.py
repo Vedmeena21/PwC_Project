@@ -323,61 +323,85 @@ def send_signup_request_email(
         <tr>
           <td style="padding:0 32px 16px;">
             <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#374151;
-                      text-transform:uppercase;letter-spacing:0.5px;">Message from applicant</p>
-            <div style="background:#f8fafc;border-left:3px solid #0f172a;
+                      text-transform:uppercase;letter-spacing:0.5px;">Note from applicant</p>
+            <div style="background:#fffbeb;border-left:3px solid #d97706;
                         padding:12px 16px;border-radius:4px;font-size:13px;color:#334155;
                         font-style:italic;">
               "{signup_note}"
             </div>
           </td>
         </tr>"""
+    else:
+        note_block = """
+        <tr>
+          <td style="padding:0 32px 16px;">
+            <p style="margin:0;font-size:13px;color:#94a3b8;font-style:italic;">
+              No note provided.
+            </p>
+          </td>
+        </tr>"""
 
     inner = f"""
-    {_header_block("Invoice Approval System", "New User Access Request")}
+    {_header_block("Invoice Approval System", "New Access Request")}
     <tr>
-      <td style="background:#0ea5e9;padding:16px 32px;">
-        <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">
-          {new_user_name} is requesting access
+      <td style="background:#EB8C00;padding:16px 32px;">
+        <p style="margin:0;color:#ffffff;font-size:15px;font-weight:700;">
+          {new_user_name} ({new_user_email}) has requested access
         </p>
       </td>
     </tr>
     <tr>
-      <td style="padding:24px 32px 0;">
+      <td style="padding:24px 32px 16px;">
         <table width="100%" cellpadding="0" cellspacing="0"
-               style="background:#f8fafc;border-radius:8px;padding:16px;">
-          <tr>
-            <td style="font-size:13px;color:#64748b;padding:4px 0;">Name</td>
-            <td style="font-size:13px;color:#0f172a;font-weight:600;text-align:right;">
+               style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="font-size:13px;color:#64748b;padding:12px 16px;width:40%;">Full Name</td>
+            <td style="font-size:13px;color:#0f172a;font-weight:600;padding:12px 16px;">
               {new_user_name}
             </td>
           </tr>
-          <tr>
-            <td style="font-size:13px;color:#64748b;padding:4px 0;">Email</td>
-            <td style="font-size:13px;color:#0f172a;font-weight:600;text-align:right;">
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="font-size:13px;color:#64748b;padding:12px 16px;">Email Address</td>
+            <td style="font-size:13px;color:#0f172a;font-weight:600;padding:12px 16px;">
               {new_user_email}
+            </td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;color:#64748b;padding:12px 16px;">Account Status</td>
+            <td style="padding:12px 16px;">
+              <span style="display:inline-block;background:#fef3c7;color:#92400e;
+                           font-size:11px;font-weight:700;padding:2px 10px;
+                           border-radius:20px;letter-spacing:0.3px;">PENDING APPROVAL</span>
             </td>
           </tr>
         </table>
       </td>
     </tr>
+    <tr>
+      <td style="padding:0 32px 8px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#374151;
+                  text-transform:uppercase;letter-spacing:0.5px;">Note from applicant</p>
+      </td>
+    </tr>
     {note_block}
     <tr>
-      <td style="padding:24px 32px 32px;">
-        <p style="margin:0 0 16px;font-size:13px;color:#64748b;">
-          Review this request and approve or reject the user from the Manage Users page.
+      <td style="padding:8px 32px 32px;">
+        <p style="margin:0 0 16px;font-size:13px;color:#64748b;line-height:1.6;">
+          Log in to the Invoice Approval System to approve or reject this request.
+          The applicant will not be able to access the system until you take action.
         </p>
         <a href="{settings.frontend_url}/manage"
            style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;
                   padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">
-          Review Request →
+          Review in Manage Users
         </a>
       </td>
     </tr>
-    {_footer_block("This applicant cannot log in until you approve them.")}
+    {_footer_block("This applicant cannot log in until you approve them. Do not reply to this email.")}
     """
 
     return _send(
-        subject=f"🔔 New access request — {new_user_name} ({new_user_email})",
+        subject=f"Access Request: {new_user_name} ({new_user_email})",
         html=_email_shell(inner),
         recipients=[settings.admin_email],
     )
