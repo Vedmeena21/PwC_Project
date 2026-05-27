@@ -11,7 +11,16 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import { InvoiceRowSkeleton, StatCardSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
 
-const PIE_COLORS = ['#16a34a', '#dc2626', '#f59e0b', '#0ea5e9', '#6b7280']
+// Status → colour. Keyed by name so colours don't shift when a slice is filtered out
+// (previously the colours were positional and Pending would render amber whenever
+// Flagged was 0 because the filter compacted the array).
+const STATUS_COLOR = {
+  Approved: '#16a34a',  // green
+  Rejected: '#dc2626',  // red
+  Flagged:  '#f59e0b',  // amber
+  Pending:  '#2563eb',  // blue — matches the Pending Review stat card
+  Failed:   '#6b7280',  // slate
+}
 
 // ── Detect touch device (cached once on load) ─────────────────────────────────
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches
@@ -217,9 +226,8 @@ export default function Dashboard() {
   const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 6 })
   const [uploading, setUploading]                  = useState(false)
 
-  const approvalRate = stats?.total > 0
-    ? Math.round((stats.approved / stats.total) * 100)
-    : null
+  const approvalRate  = stats?.total > 0 ? Math.round((stats.approved / stats.total) * 100) : null
+  const rejectionRate = stats?.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : null
 
   const pieData = stats ? [
     { name: 'Approved', value: stats.approved },
@@ -267,7 +275,7 @@ export default function Dashboard() {
           <>
             <StatCard icon={FileText}      label="Total"          value={stats?.total}    color="text-slate-900" sub="all time"      filterStatus="total"    />
             <StatCard icon={CheckCircle}   label="Approved"       value={stats?.approved} color="text-green-600" sub={approvalRate != null ? `${approvalRate}% rate` : undefined} filterStatus="approved" />
-            <StatCard icon={XCircle}       label="Rejected"       value={stats?.rejected} color="text-red-600"   filterStatus="rejected" />
+            <StatCard icon={XCircle}       label="Rejected"       value={stats?.rejected} color="text-red-600"   sub={rejectionRate != null ? `${rejectionRate}% rate` : undefined} filterStatus="rejected" />
             <StatCard icon={AlertTriangle} label="Flagged"        value={stats?.flagged}  color="text-amber-600" sub="needs review"  filterStatus="flagged"  />
             <StatCard icon={Clock}         label="Pending Review" value={stats?.pending}  color="text-blue-600"  sub="awaiting decision" filterStatus="pending" />
           </>
@@ -300,15 +308,15 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height={150}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={42} outerRadius={65} paddingAngle={3} dataKey="value">
-                    {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    {pieData.map((d) => <Cell key={d.name} fill={STATUS_COLOR[d.name]} />)}
                   </Pie>
                   <Tooltip formatter={(val, name) => [val, name]} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-2 justify-center">
-                {pieData.map((d, i) => (
+                {pieData.map((d) => (
                   <span key={d.name} className="flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i] }} />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_COLOR[d.name] }} />
                     {d.name} <span className="font-semibold text-slate-900">({d.value})</span>
                   </span>
                 ))}
