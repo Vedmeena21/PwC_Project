@@ -11,6 +11,20 @@ const api = axios.create({
   timeout: 60000, // 60s — PDF upload + Groq extraction can take ~15s
 })
 
+// ── Admin token ───────────────────────────────────────────────────────────────
+// Backend write endpoints (POST/PUT/DELETE) require X-Admin-Token. The token is
+// also exposed in the JS bundle (Vite inlines VITE_* at build time), so this is
+// defense-in-depth against trivial direct-curl probing, not real auth.
+const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || ''
+const WRITE_METHODS = new Set(['post', 'put', 'patch', 'delete'])
+
+api.interceptors.request.use((config) => {
+  if (ADMIN_TOKEN && WRITE_METHODS.has((config.method || '').toLowerCase())) {
+    config.headers['X-Admin-Token'] = ADMIN_TOKEN
+  }
+  return config
+})
+
 // ── Response interceptor ──────────────────────────────────────────────────────
 // Unwraps .data so callers get the payload directly (not the Axios wrapper).
 // Normalises errors to plain Error objects with a human-readable message.
@@ -47,6 +61,7 @@ export const invoiceApi = {
   get:    (id) => api.get(`/invoices/${id}`),
   review: (id, payload) => api.post(`/invoices/${id}/review`, payload),
   delete: (id, by = 'admin') => api.delete(`/invoices/${id}`, { params: { deleted_by: by } }),
+  reprocess: (id) => api.post(`/invoices/${id}/reprocess`),
   stats:  () => api.get('/invoices/stats/summary'),
   fileUrl:(id) => api.get(`/invoices/${id}/file-url`),
 }

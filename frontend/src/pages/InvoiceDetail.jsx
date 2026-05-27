@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, CheckCircle, XCircle, AlertCircle,
-  Clock, FileText, ChevronDown, ChevronUp, User, Calendar, Hash, Trash2,
+  Clock, FileText, ChevronDown, ChevronUp, User, Calendar, Hash, Trash2, RefreshCw,
 } from 'lucide-react'
 import { useInvoice } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
@@ -74,6 +74,20 @@ export default function InvoiceDetail() {
   const [showAudit,    setShowAudit]    = useState(false)
   const [showDeleteAuth, setShowDeleteAuth] = useState(false)
   const [deleting,     setDeleting]     = useState(false)
+  const [reprocessing, setReprocessing] = useState(false)
+
+  const handleReprocess = async () => {
+    setReprocessing(true)
+    try {
+      const res = await invoiceApi.reprocess(id)
+      toast({ type: 'success', message: res.message || 'Invoice queued for reprocessing' })
+      refetch()
+    } catch (e) {
+      toast({ type: 'error', message: e.message })
+    } finally {
+      setReprocessing(false)
+    }
+  }
 
   const handleDelete = async (user) => {
     setShowDeleteAuth(false)
@@ -178,9 +192,28 @@ export default function InvoiceDetail() {
         </button>
       </div>
 
-      {/* ── Verdict / processing banner ── */}
+      {/* ── Verdict / processing / failed banner ── */}
       {isProcessing ? (
         <ProcessingBanner />
+      ) : invoice?.status === 'extraction_failed' ? (
+        <div className="bg-red-600 rounded-xl p-4 md:p-5 text-white flex items-start gap-3 md:gap-4">
+          <AlertCircle className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm md:text-base">Extraction Failed</p>
+            <p className="text-xs md:text-sm opacity-85 mt-1">
+              The pipeline could not extract data from this invoice. This is usually a
+              transient error (Groq rate-limit or network blip). Reprocess to retry.
+            </p>
+          </div>
+          <button
+            onClick={handleReprocess}
+            disabled={reprocessing}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white text-red-700 hover:bg-red-50 disabled:opacity-60 flex-shrink-0"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', reprocessing && 'animate-spin')} />
+            {reprocessing ? 'Reprocessing…' : 'Reprocess'}
+          </button>
+        </div>
       ) : rec?.verdict ? (
         <VerdictBanner
           verdict={rec.verdict}
