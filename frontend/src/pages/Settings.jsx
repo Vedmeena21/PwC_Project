@@ -14,6 +14,10 @@ export default function Settings() {
   const [loading,          setLoading]           = useState(true)
   const [saving,           setSaving]            = useState(false)
   const [showAuth,         setShowAuth]          = useState(false)
+  // Gate for Add Recipient: must authenticate before the manager list is revealed.
+  // Otherwise visitors could enumerate authorised manager names + emails just by
+  // clicking the button.
+  const [showAddAuth,      setShowAddAuth]       = useState(false)
 
   useEffect(() => {
     Promise.all([settingsApi.getRecipients(), settingsApi.getAll()])
@@ -66,6 +70,15 @@ export default function Settings() {
           subtitle="Enter your manager credentials to apply changes"
           onLogin={saveAll}
           onCancel={() => setShowAuth(false)}
+        />
+      )}
+
+      {showAddAuth && (
+        <UserLoginModal
+          title="Verify Identity"
+          subtitle="Sign in to view the manager list"
+          onLogin={() => { setShowAddAuth(false); setShowAddModal(true) }}
+          onCancel={() => setShowAddAuth(false)}
         />
       )}
 
@@ -131,7 +144,7 @@ export default function Settings() {
         </div>
         <p className="text-xs text-slate-500">These addresses receive all system notifications (flagged invoices, rulebook updates).</p>
 
-        <button onClick={() => setShowAddModal(true)} className="btn-primary w-full sm:w-auto justify-center">
+        <button onClick={() => setShowAddAuth(true)} className="btn-primary w-full sm:w-auto justify-center">
           <Plus className="w-4 h-4" />
           Add Recipient
         </button>
