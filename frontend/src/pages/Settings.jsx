@@ -189,22 +189,43 @@ export default function Settings() {
               No recipients yet — nobody will receive notification emails until you add one below.
             </p>
           ) : (
-            recipients.map((email) => (
-              <div key={email} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  <span className="text-sm text-slate-700 truncate">{email}</span>
+            recipients.map((email) => {
+              // Match against the authorised manager list so we can show a
+              // friendly name + role. Falls back gracefully when the email
+              // isn't in AUTHORISED_USERS (e.g. an external accountant).
+              const user = AUTHORISED_USERS.find(
+                u => u.email && u.email.toLowerCase() === email.toLowerCase()
+              )
+              const displayName = user?.name || 'External recipient'
+              const initial     = (user?.name || email)[0].toUpperCase()
+              return (
+              <div key={email} className="flex items-start justify-between px-3 py-3 bg-slate-50 rounded-lg">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
+                    {initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
+                    <p className="text-xs text-slate-600 truncate flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                      {email}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Receives flagged-invoice alerts & rulebook-update emails
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => requestRemoveEmail(email)}
-                  className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2"
+                  className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2 mt-0.5"
                   aria-label={`Remove ${email}`}
                   title="Remove recipient (requires manager login)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ))
+              )
+            })
           )}
         </div>
 
