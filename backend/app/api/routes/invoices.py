@@ -74,7 +74,7 @@ def _process_invoice(invoice_id: str, file_bytes: bytes, filename: str = "invoic
                 db.table("invoices").update({
                     "invoice_number": extracted.invoice_number,
                     "vendor_name":    extracted.vendor_name,
-                    "status":         "flagged",
+                    "status":         "rejected",
                 }).eq("id", invoice_id).execute()
                 _log(db, invoice_id, "duplicate_detected", details={
                     "original_id": dup.data[0]["id"],

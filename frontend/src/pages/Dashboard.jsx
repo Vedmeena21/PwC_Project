@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, Eye } from 'lucide-react'
+import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, ShieldCheck, BarChart2 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useStats, useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
@@ -361,34 +361,66 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Queue bars */}
+        {/* AI Insights */}
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5 text-slate-600" />
+              <BarChart2 className="w-3.5 h-3.5 text-slate-600" />
             </div>
-            <h2 className="text-sm font-semibold text-slate-900">Queue Status</h2>
+            <h2 className="text-sm font-semibold text-slate-900">AI Insights</h2>
           </div>
-          <div className="space-y-4">
-            {[
-              { label: 'Processing',        value: stats?.processing        ?? 0, color: 'bg-blue-500',  light: 'text-blue-600'  },
-              { label: 'Pending Review',    value: stats?.pending           ?? 0, color: 'bg-amber-500', light: 'text-amber-600' },
-              { label: 'Failed Extraction', value: stats?.extraction_failed ?? 0, color: 'bg-slate-400', light: 'text-slate-500' },
-            ].map(({ label, value, color, light }) => (
-              <div key={label}>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-xs text-slate-600">{label}</span>
-                  <span className={cn('text-xs font-bold tabular-nums', value > 0 ? light : 'text-slate-400')}>{value}</span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-700', color)}
-                    style={{ width: stats?.total ? `${Math.min((value / stats.total) * 100, 100)}%` : '0%' }}
-                  />
-                </div>
+          {!stats || stats.total === 0 ? (
+            <div className="h-32 flex items-center justify-center text-slate-400 text-sm">No data yet</div>
+          ) : (
+            <div className="space-y-4">
+              {/* Pass rate */}
+              {(() => {
+                const decided  = (stats.approved ?? 0) + (stats.rejected ?? 0)
+                const passRate = decided > 0 ? Math.round((stats.approved / decided) * 100) : null
+                return (
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs text-slate-600">Approval rate</span>
+                      <span className="text-xs font-bold text-green-600">{passRate != null ? `${passRate}%` : '—'}</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full transition-all duration-700"
+                        style={{ width: passRate != null ? `${passRate}%` : '0%' }} />
+                    </div>
+                  </div>
+                )
+              })()}
+              {/* AI flag rate */}
+              {(() => {
+                const flagRate = stats.total > 0 ? Math.round(((stats.flagged ?? 0) / stats.total) * 100) : null
+                return (
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs text-slate-600">AI flag rate</span>
+                      <span className={cn('text-xs font-bold', flagRate > 30 ? 'text-red-500' : 'text-amber-600')}>{flagRate != null ? `${flagRate}%` : '—'}</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all duration-700', flagRate > 30 ? 'bg-red-400' : 'bg-amber-400')}
+                        style={{ width: flagRate != null ? `${flagRate}%` : '0%' }} />
+                    </div>
+                  </div>
+                )
+              })()}
+              {/* Summary counts */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {[
+                  { label: 'Awaiting',  value: stats.pending  ?? 0, color: 'text-blue-600'  },
+                  { label: 'Flagged',   value: stats.flagged  ?? 0, color: 'text-amber-600' },
+                  { label: 'Failed',    value: stats.extraction_failed ?? 0, color: 'text-slate-500' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="text-center bg-slate-50 rounded-lg py-2">
+                    <p className={cn('text-base font-bold tabular-nums', color)}>{value}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{label}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -417,25 +449,33 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
-            {invoices.map((inv) => (
-              <div
-                key={inv.id}
-                onClick={() => navigate(`/invoices/${inv.id}`)}
-                className="flex items-center gap-3 md:gap-4 px-5 md:px-6 py-3.5 hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition-colors"
-              >
-                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 text-slate-500" />
+            {invoices.map((inv) => {
+              // Pick the most useful one-liner to show under the invoice number
+              const reason = inv.summary
+                || (inv.status === 'extraction_failed' ? 'Could not extract data from file' : null)
+                || (inv.status === 'processing'        ? 'Processing…' : null)
+                || inv.vendor_name
+                || '—'
+              return (
+                <div
+                  key={inv.id}
+                  onClick={() => navigate(`/invoices/${inv.id}`)}
+                  className="flex items-center gap-3 md:gap-4 px-5 md:px-6 py-3.5 hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition-colors"
+                >
+                  <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{inv.invoice_number}</p>
+                    <p className="text-xs text-slate-400 truncate">{reason}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <StatusBadge status={inv.status} />
+                    <ChevronRight className="w-4 h-4 text-slate-300 hidden sm:block" />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">{inv.invoice_number}</p>
-                  <p className="text-xs text-slate-400 truncate">{inv.vendor_name} · {formatDate(inv.invoice_date)}</p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={inv.status} />
-                  <ChevronRight className="w-4 h-4 text-slate-300 hidden sm:block" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
