@@ -131,6 +131,7 @@ const ACCENT = {
   'text-green-600': { border: 'border-l-green-500',  iconBg: 'bg-green-50',   gradient: 'from-green-50' },
   'text-red-600':   { border: 'border-l-red-500',    iconBg: 'bg-red-50',     gradient: 'from-red-50'   },
   'text-amber-600': { border: 'border-l-amber-500',  iconBg: 'bg-amber-50',   gradient: 'from-amber-50' },
+  'text-blue-600':  { border: 'border-l-blue-500',   iconBg: 'bg-blue-50',    gradient: 'from-blue-50'  },
 }
 
 function StatCard({ icon: Icon, label, value, color, sub, filterStatus }) {
@@ -259,15 +260,16 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         {statsLoading && !stats ? (
-          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+          Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard icon={FileText}      label="Total"    value={stats?.total}    color="text-slate-900" sub="all time"      filterStatus="total"    />
-            <StatCard icon={CheckCircle}   label="Approved" value={stats?.approved} color="text-green-600" sub={approvalRate != null ? `${approvalRate}% rate` : undefined} filterStatus="approved" />
-            <StatCard icon={XCircle}       label="Rejected" value={stats?.rejected} color="text-red-600"   filterStatus="rejected" />
-            <StatCard icon={AlertTriangle} label="Flagged"  value={stats?.flagged}  color="text-amber-600" sub="needs review"  filterStatus="flagged"  />
+            <StatCard icon={FileText}      label="Total"          value={stats?.total}    color="text-slate-900" sub="all time"      filterStatus="total"    />
+            <StatCard icon={CheckCircle}   label="Approved"       value={stats?.approved} color="text-green-600" sub={approvalRate != null ? `${approvalRate}% rate` : undefined} filterStatus="approved" />
+            <StatCard icon={XCircle}       label="Rejected"       value={stats?.rejected} color="text-red-600"   filterStatus="rejected" />
+            <StatCard icon={AlertTriangle} label="Flagged"        value={stats?.flagged}  color="text-amber-600" sub="needs review"  filterStatus="flagged"  />
+            <StatCard icon={Clock}         label="Pending Review" value={stats?.pending}  color="text-blue-600"  sub="awaiting decision" filterStatus="pending" />
           </>
         )}
       </div>
