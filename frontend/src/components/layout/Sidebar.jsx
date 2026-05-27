@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, FileText, BookOpen, Settings, Users, LogOut, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { useManageBadge } from '@/hooks/useApi'
 
 // ── Sidebar nav items ─────────────────────────────────────────────────────────
 // Manage is only rendered for admins (conditional below).
@@ -13,7 +14,7 @@ const BASE_NAV = [
   { to: '/settings', label: 'Settings',  icon: Settings },
 ]
 
-function NavItem({ to, label, icon: Icon, end }) {
+function NavItem({ to, label, icon: Icon, end, badge = 0 }) {
   return (
     <NavLink
       to={to}
@@ -33,7 +34,12 @@ function NavItem({ to, label, icon: Icon, end }) {
             <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#EB8C00] rounded-r-full" />
           )}
           <Icon className={cn('w-4 h-4 flex-shrink-0 transition-colors', isActive ? 'text-[#EB8C00]' : 'text-gray-400')} />
-          {label}
+          <span className="flex-1">{label}</span>
+          {badge > 0 && (
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
         </>
       )}
     </NavLink>
@@ -94,6 +100,7 @@ function ProfileChip({ onSignout }) {
 export default function Sidebar() {
   const { isAdmin, logout } = useAuth()
   const navigate = useNavigate()
+  const manageBadge = useManageBadge(isAdmin)
 
   function handleSignout() {
     logout()
@@ -101,7 +108,7 @@ export default function Sidebar() {
   }
 
   const nav = isAdmin
-    ? [...BASE_NAV, { to: '/manage', label: 'Manage', icon: Users }]
+    ? [...BASE_NAV, { to: '/manage', label: 'Manage', icon: Users, badge: manageBadge }]
     : BASE_NAV
 
   return (
@@ -124,8 +131,8 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {nav.map(({ to, label, icon, end }) => (
-            <NavItem key={to} to={to} label={label} icon={icon} end={end} />
+          {nav.map(({ to, label, icon, end, badge }) => (
+            <NavItem key={to} to={to} label={label} icon={icon} end={end} badge={badge} />
           ))}
         </nav>
 
@@ -148,7 +155,7 @@ export default function Sidebar() {
 
       {/* ── Mobile bottom nav ── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-30 flex">
-        {nav.map(({ to, label, icon: Icon, end }) => (
+        {nav.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -162,8 +169,13 @@ export default function Sidebar() {
           >
             {({ isActive }) => (
               <>
-                <span className={cn('w-8 h-8 flex items-center justify-center rounded-lg transition-colors', isActive && 'bg-orange-50')}>
+                <span className={cn('relative w-8 h-8 flex items-center justify-center rounded-lg transition-colors', isActive && 'bg-orange-50')}>
                   <Icon className="w-4 h-4" />
+                  {badge > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center leading-none">
+                      {badge > 9 ? '9+' : badge}
+                    </span>
+                  )}
                 </span>
                 {label}
               </>

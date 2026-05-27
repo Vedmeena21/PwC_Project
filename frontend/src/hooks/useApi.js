@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { invoiceApi, rulebookApi } from '@/services/api'
+import { invoiceApi, rulebookApi, authApi } from '@/services/api'
 
 
 // ══ INVOICE HOOKS ════════════════════════════════════════════════════════════
@@ -66,9 +66,7 @@ export function useInvoice(id) {
   const pollCountRef = useRef(0)
   useEffect(() => {
     const status = data?.invoice?.status
-    const stillProcessing =
-      status === 'processing' ||
-      (status === 'pending' && !data?.invoice?.verdict)
+    const stillProcessing = status === 'processing'
     if (!stillProcessing) { pollCountRef.current = 0; return }
     if (pollCountRef.current >= 60) return
     const timer = setTimeout(() => {
@@ -96,6 +94,41 @@ export function useStats(view = 'all') {
   }, [view])
 
   return { stats, loading }
+}
+
+
+// ══ MANAGE BADGE HOOK ════════════════════════════════════════════════════════
+// Returns the total count of actions needed in Manage:
+// pending user approvals + invoices awaiting review (flagged + pending).
+// Polls every 30s so the badge stays fresh without hammering the API.
+export function useManageBadge(isAdmin = false) {
+  const [count, setCount] = useState(0)
+
+  const fetch = useCallback(async () => {
+    if (!isAdmin) return
+    try {
+      const [users, flagged, pending] = await Promise.all([
+        authApi.pending(),
+        invoiceApi.list({ status: 'flagged', limit: 1, view: 'all' }),
+        invoiceApi.list({ status: 'pending', limit: 1, view: 'all' }),
+      ])
+      setCount(
+        (users.users?.length || 0) +
+        (flagged.total || 0) +
+        (pending.total || 0)
+      )
+    } catch {
+      // silently ignore — badge is non-critical
+    }
+  }, [isAdmin])
+
+  useEffect(() => {
+    fetch()
+    const t = setInterval(fetch, 30000)
+    return () => clearInterval(t)
+  }, [fetch])
+
+  return count
 }
 
 

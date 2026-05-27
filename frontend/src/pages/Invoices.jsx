@@ -10,7 +10,7 @@ import UploadZone from '@/components/ui/UploadZone'
 import { InvoiceRowSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
 
-const STATUS_FILTERS = ['all', 'pending', 'processing', 'flagged', 'approved', 'rejected', 'extraction_failed']
+const STATUS_FILTERS = ['all', 'pending', 'processing', 'flagged', 'approved', 'rejected']
 const PAGE_SIZE      = 10
 
 export default function Invoices() {
