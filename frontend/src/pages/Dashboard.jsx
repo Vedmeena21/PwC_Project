@@ -461,34 +461,48 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
-            {invoices.map((inv) => {
-              // Pick the most useful one-liner to show under the invoice number
-              const reason = inv.summary
-                || (inv.status === 'extraction_failed' ? 'Could not extract data from file' : null)
-                || (inv.status === 'processing'        ? 'Processing…' : null)
-                || inv.vendor_name
-                || '—'
-              return (
-                <div
-                  key={inv.id}
-                  onClick={() => navigate(`/invoices/${inv.id}`)}
-                  className="flex items-center gap-3 md:gap-4 px-5 md:px-6 py-3.5 hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition-colors"
-                >
-                  <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-4 h-4 text-slate-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{inv.invoice_number}</p>
-                    <p className="text-xs text-slate-400 truncate">{reason}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <StatusBadge status={inv.status} />
-                    <ChevronRight className="w-4 h-4 text-slate-300 hidden sm:block" />
-                  </div>
-                </div>
-              )
-            })}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50">
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-2.5">Invoice</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5 hidden sm:table-cell">Vendor</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5 hidden md:table-cell">Date</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5 hidden md:table-cell">Checks</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {invoices.map((inv) => (
+                  <tr
+                    key={inv.id}
+                    onClick={() => navigate(`/invoices/${inv.id}`)}
+                    className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 bg-slate-100 rounded-md flex items-center justify-center flex-shrink-0 group-hover:bg-white">
+                          <FileText className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                        <span className="font-medium text-slate-900 truncate max-w-[100px]">{inv.invoice_number}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs hidden sm:table-cell truncate max-w-[160px]">{inv.vendor_name || '—'}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs hidden md:table-cell">{formatDate(inv.invoice_date) || '—'}</td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {inv.total_checks != null ? (
+                        <span className={cn('text-xs font-semibold', inv.failed_checks === 0 ? 'text-green-600' : 'text-red-500')}>
+                          {inv.passed_checks}/{inv.total_checks}
+                        </span>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={inv.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
