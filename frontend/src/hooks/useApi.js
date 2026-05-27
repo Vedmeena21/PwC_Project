@@ -125,10 +125,20 @@ export function useManageBadge(isAdmin = false) {
   useEffect(() => {
     fetch()
     const t = setInterval(fetch, 30000)
-    return () => clearInterval(t)
+    // Instant refresh when Manage page completes an action
+    window.addEventListener('manage:action', fetch)
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('manage:action', fetch)
+    }
   }, [fetch])
 
   return count
+}
+
+// Call this after any action in Manage to instantly refresh the sidebar badge
+export function notifyManageAction() {
+  window.dispatchEvent(new Event('manage:action'))
 }
 
 

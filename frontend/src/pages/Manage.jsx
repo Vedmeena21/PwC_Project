@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi, invoiceApi } from '@/services/api'
+import { notifyManageAction } from '@/hooks/useApi'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -377,12 +378,12 @@ export default function Manage() {
   useEffect(() => { refresh(); refreshFlagged() }, [refresh, refreshFlagged])
 
   async function handleApprove(id) {
-    try { await authApi.approve(id); toast('User approved.', 'success'); refresh() }
+    try { await authApi.approve(id); toast('User approved.', 'success'); refresh(); notifyManageAction() }
     catch (err) { toast(err.message, 'error') }
   }
 
   async function handleReject(id, reason) {
-    try { await authApi.reject(id, reason); toast('User rejected.', 'success'); refresh() }
+    try { await authApi.reject(id, reason); toast('User rejected.', 'success'); refresh(); notifyManageAction() }
     catch (err) { toast(err.message, 'error') }
   }
 
@@ -396,6 +397,7 @@ export default function Manage() {
       await invoiceApi.review(id, { action: verdict, notes: '' })
       toast(`Invoice ${verdict}.`, 'success')
       refreshFlagged()
+      notifyManageAction()
     } catch (err) {
       toast(err.message, 'error')
     }
