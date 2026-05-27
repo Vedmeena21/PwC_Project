@@ -41,21 +41,37 @@ class AdminCreateUserBody(BaseModel):
 # ── POST /auth/signup ─────────────────────────────────────────────────────────
 # New user submits credentials + optional note. Account is created with
 # status=pending and admin is emailed. No JWT is issued yet.
+# If a previously-rejected account exists for this email, it is reset to
+# pending so the user can re-apply without needing admin to manually delete.
 @router.post("/signup")
 async def signup(body: SignupBody, background_tasks: BackgroundTasks):
     email = body.email.lower().strip()
-    if get_user_by_email(email):
-        raise HTTPException(status_code=409, detail="An account with this email already exists")
+    existing = get_user_by_email(email)
 
     db = get_supabase()
-    db.table("users").insert({
-        "email":         email,
-        "password_hash": hash_password(body.password),
-        "name":          body.name.strip(),
-        "role":          "user",
-        "status":        "pending",
-        "signup_note":   body.note.strip() if body.note else None,
-    }).execute()
+    if existing:
+        if existing["status"] == "rejected":
+            # Allow re-application — overwrite the rejected record
+            db.table("users").update({
+                "password_hash": hash_password(body.password),
+                "name":          body.name.strip(),
+                "status":        "pending",
+                "signup_note":   body.note.strip() if body.note else None,
+                "approved_at":   None,
+                "approved_by":   None,
+            }).eq("id", existing["id"]).execute()
+        else:
+            raise HTTPException(status_code=409, detail="An account with this email already exists")
+
+    else:
+        db.table("users").insert({
+            "email":         email,
+            "password_hash": hash_password(body.password),
+            "name":          body.name.strip(),
+            "role":          "user",
+            "status":        "pending",
+            "signup_note":   body.note.strip() if body.note else None,
+        }).execute()
 
     # Notify admin in the background so the HTTP response isn't delayed by
     # Resend latency. Email failure must not break signup.
