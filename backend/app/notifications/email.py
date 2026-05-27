@@ -313,7 +313,7 @@ def send_rulebook_updated_email(diff: RulebookDiffResult) -> bool:
     """
 
     return _send(
-        subject=f"📋 Rulebook Updated — {diff.label} v{diff.to_version} · Activated by {activated_by}",
+        subject=f"Rulebook Updated: {diff.label} v{diff.to_version} — Activated by {activated_by}",
         html=_email_shell(inner),
         recipients=recipients,
     )
@@ -331,14 +331,13 @@ def send_signup_request_email(
     if not settings.admin_email:
         return False
 
-    note_block = ""
     if signup_note:
         note_block = f"""
         <tr>
-          <td style="padding:0 32px 16px;">
+          <td style="padding:0 32px 24px;">
             <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#374151;
                       text-transform:uppercase;letter-spacing:0.5px;">Note from applicant</p>
-            <div style="background:#fffbeb;border-left:3px solid #d97706;
+            <div style="background:#fffbeb;border-left:3px solid #EB8C00;
                         padding:12px 16px;border-radius:4px;font-size:13px;color:#334155;
                         font-style:italic;">
               "{signup_note}"
@@ -348,10 +347,10 @@ def send_signup_request_email(
     else:
         note_block = """
         <tr>
-          <td style="padding:0 32px 16px;">
-            <p style="margin:0;font-size:13px;color:#94a3b8;font-style:italic;">
-              No note provided.
-            </p>
+          <td style="padding:0 32px 24px;">
+            <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#374151;
+                      text-transform:uppercase;letter-spacing:0.5px;">Note from applicant</p>
+            <p style="margin:0;font-size:13px;color:#94a3b8;font-style:italic;">No note provided.</p>
           </td>
         </tr>"""
 
@@ -360,7 +359,7 @@ def send_signup_request_email(
     <tr>
       <td style="background:#EB8C00;padding:14px 32px;">
         <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.2px;">
-          {new_user_name} &lt;{new_user_email}&gt; is requesting access to the system
+          {new_user_name} · {new_user_email} is requesting access
         </p>
       </td>
     </tr>
@@ -383,18 +382,12 @@ def send_signup_request_email(
           <tr>
             <td style="font-size:13px;color:#64748b;padding:12px 16px;">Account Status</td>
             <td style="padding:12px 16px;">
-              <span style="display:inline-block;background:#fef3c7;color:#92400e;
-                           font-size:11px;font-weight:700;padding:2px 10px;
-                           border-radius:20px;letter-spacing:0.3px;">PENDING APPROVAL</span>
+              <span style="display:inline-block;background:#fff3e0;color:#b45309;
+                           font-size:11px;font-weight:700;padding:3px 10px;
+                           border-radius:20px;letter-spacing:0.3px;border:1px solid #fed7aa;">PENDING APPROVAL</span>
             </td>
           </tr>
         </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 32px 8px;">
-        <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#374151;
-                  text-transform:uppercase;letter-spacing:0.5px;">Note from applicant</p>
       </td>
     </tr>
     {note_block}
