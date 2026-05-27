@@ -110,9 +110,7 @@ export default function Login() {
                 {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
               </h1>
               <p className="text-gray-400 text-xs mt-1">
-                {mode === 'login'
-                  ? 'Invoice Approval Automation System'
-                  : 'Request access — your account will be reviewed'}
+                {mode === 'signup' ? 'Request access — your account will be reviewed' : ''}
               </p>
             </div>
 
@@ -275,9 +273,5 @@ function PwCLogo() {
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 function PwCFooter() {
-  return (
-    <p className="text-center text-[10px] text-gray-400 pb-2">
-      Invoice Approval Automation · Built for PwC Engineering
-    </p>
-  )
+  return null
 }
