@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, Activity } from 'lucide-react'
+import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, Activity, ScanText, ShieldCheck, UserCheck } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useStats, useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
@@ -391,46 +391,62 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Recent Activity */}
-        <div className="card p-5 flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
+        {/* How it works */}
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-5">
             <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
               <Activity className="w-3.5 h-3.5 text-slate-600" />
             </div>
-            <h2 className="text-sm font-semibold text-slate-900">Recent Activity</h2>
+            <h2 className="text-sm font-semibold text-slate-900">How It Works</h2>
           </div>
-          {actLoading ? (
-            <div className="space-y-3">
-              {[1,2,3].map(i => <div key={i} className="skeleton h-8 rounded-lg" />)}
-            </div>
-          ) : activity.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">No activity yet</div>
-          ) : (
-            <div className="space-y-2.5 overflow-y-auto">
-              {activity.map((a) => {
-                const cfg = ACTION_CONFIG[a.action] || ACTION_CONFIG._default
-                return (
-                  <div
-                    key={a.id}
-                    onClick={() => navigate(`/invoices/${a.invoice_id}`)}
-                    className="flex items-start gap-2.5 cursor-pointer hover:bg-slate-50 rounded-lg px-1 py-1 -mx-1 transition-colors"
-                  >
-                    <span className={cn('mt-0.5 text-sm flex-shrink-0', cfg.color)}>{cfg.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 leading-snug">
-                        <span className="font-medium">{a.invoice_number}</span>
-                        {' '}<span className="text-slate-400">{cfg.label}</span>
-                      </p>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                        {a.actor}{a.vendor_name && a.vendor_name !== 'Processing...' ? ` · ${a.vendor_name}` : ''}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-slate-300 flex-shrink-0 mt-0.5">{timeAgo(a.created_at)}</span>
+          <div className="space-y-3">
+            {[
+              {
+                icon: Upload,
+                step: '01',
+                title: 'Upload Invoice',
+                desc: 'Upload a PDF invoice. It is stored securely and queued for processing.',
+                color: 'bg-orange-50 text-[#EB8C00]',
+              },
+              {
+                icon: ScanText,
+                step: '02',
+                title: 'AI Extraction',
+                desc: 'Groq LLM reads the invoice and extracts vendor, date, line items and PO reference.',
+                color: 'bg-blue-50 text-blue-600',
+              },
+              {
+                icon: ShieldCheck,
+                step: '03',
+                title: 'Rule Validation',
+                desc: 'Extracted data is checked against the active rulebook — rates, quantities, quality grades.',
+                color: 'bg-amber-50 text-amber-600',
+              },
+              {
+                icon: UserCheck,
+                step: '04',
+                title: 'Human Review',
+                desc: 'Admin approves or rejects based on the AI verdict. Decision is logged in the audit trail.',
+                color: 'bg-green-50 text-green-600',
+              },
+            ].map(({ icon: Icon, step, title, desc, color }, i, arr) => (
+              <div key={step} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', color)}>
+                    <Icon className="w-3.5 h-3.5" />
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  {i < arr.length - 1 && <div className="w-px flex-1 bg-slate-100 mt-1" />}
+                </div>
+                <div className="pb-3 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-300 tracking-widest">{step}</span>
+                    <p className="text-xs font-semibold text-slate-800">{title}</p>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed mt-0.5">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
