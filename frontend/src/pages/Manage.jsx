@@ -43,11 +43,22 @@ function Avatar({ name, email }) {
 // ── Pending card ──────────────────────────────────────────────────────────────
 function PendingCard({ user, onApprove, onReject }) {
   const [loading,    setLoading]    = useState(false)
+  const [done,       setDone]       = useState(false)   // optimistic "acted" state
   const [rejectNote, setRejectNote] = useState('')
   const [showReject, setShowReject] = useState(false)
 
-  async function approve() { setLoading(true); await onApprove(user.id); setLoading(false) }
-  async function reject()  { setLoading(true); await onReject(user.id, rejectNote); setLoading(false) }
+  async function approve() {
+    setLoading(true)
+    setDone(true)   // immediately collapse the buttons
+    try { await onApprove(user.id) } catch { setDone(false) }
+    setLoading(false)
+  }
+  async function reject() {
+    setLoading(true)
+    setDone(true)
+    try { await onReject(user.id, rejectNote) } catch { setDone(false) }
+    setLoading(false)
+  }
 
   const waitMins = Math.round((Date.now() - new Date(user.created_at)) / 60000)
   const waitLabel = waitMins < 60
@@ -86,15 +97,19 @@ function PendingCard({ user, onApprove, onReject }) {
       )}
 
       <div className="flex gap-2">
-        {!showReject ? (
+        {done ? (
+          <div className="flex-1 flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg py-1.5 text-xs text-slate-400">
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+            {loading ? 'Saving…' : 'Done'}
+          </div>
+        ) : !showReject ? (
           <>
             <button
               onClick={approve}
               disabled={loading}
               className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg py-1.5 text-xs font-medium transition-colors"
             >
-              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              Approve
+              <CheckCircle2 className="w-3.5 h-3.5" /> Approve
             </button>
             <button
               onClick={() => setShowReject(true)}
@@ -111,8 +126,7 @@ function PendingCard({ user, onApprove, onReject }) {
               disabled={loading}
               className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg py-1.5 text-xs font-medium transition-colors"
             >
-              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-              Confirm reject
+              <XCircle className="w-3.5 h-3.5" /> Confirm reject
             </button>
             <button onClick={() => setShowReject(false)} className="px-3 text-slate-400 hover:text-slate-600 text-xs">
               Cancel
