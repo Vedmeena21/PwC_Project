@@ -277,7 +277,7 @@ function PwCLogo() {
 function PwCFooter() {
   return (
     <p className="text-center text-[10px] text-gray-400 pb-2">
-      © {new Date().getFullYear()} PricewaterhouseCoopers. Internal use only.
+      Invoice Approval Automation · Built for PwC Engineering
     </p>
   )
 }
