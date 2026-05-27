@@ -158,28 +158,40 @@ export default function Settings() {
         </div>
         <p className="text-xs text-slate-500">These addresses receive all system notifications (flagged invoices, rulebook updates).</p>
 
+        {/* Currently-subscribed list — labelled so first-time viewers
+            immediately understand these are active recipients, not examples. */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            Currently subscribed{recipients.length > 0 && ` (${recipients.length})`}
+          </p>
+          {recipients.length === 0 ? (
+            <p className="text-xs text-slate-400 py-3 px-3 bg-slate-50 rounded-lg">
+              No recipients yet — nobody will receive notification emails until you add one below.
+            </p>
+          ) : (
+            recipients.map((email) => (
+              <div key={email} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="text-sm text-slate-700 truncate">{email}</span>
+                </div>
+                <button
+                  onClick={() => removeEmail(email)}
+                  className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2"
+                  aria-label={`Remove ${email}`}
+                  title="Remove recipient"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
         <button onClick={() => setShowAddAuth(true)} className="btn-primary w-full sm:w-auto justify-center">
           <Plus className="w-4 h-4" />
           Add Recipient
         </button>
-
-        {recipients.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-3">No recipients added yet</p>
-        ) : (
-          <div className="space-y-2">
-            {recipients.map((email) => (
-              <div key={email} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-sm text-slate-700">{email}</span>
-                </div>
-                <button onClick={() => removeEmail(email)} className="text-slate-400 hover:text-red-500 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── Notification toggles (gated) ── */}
