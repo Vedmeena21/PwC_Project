@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   BookOpen, Plus, CheckCircle, ArrowRight,
-  ChevronDown, ChevronUp, Zap, GitCompare,
+  ChevronDown, ChevronUp, Zap, GitCompare, X,
 } from 'lucide-react'
 import { useRulebookVersions, useActiveRulebook } from '@/hooks/useApi'
 import { rulebookApi } from '@/services/api'
@@ -29,7 +29,8 @@ const emptyRule = () => ({
 })
 
 // ── DiffView ──────────────────────────────────────────────────────────────────
-const DiffView = ({ diff }) => {
+// Shows older (from) → newer (to) with both labels. onClose dismisses the panel.
+const DiffView = ({ diff, onClose }) => {
   if (!diff) return null
 
   const TYPE_CFG = {
@@ -38,17 +39,30 @@ const DiffView = ({ diff }) => {
     modified: { color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200',  label: 'CHANGED' },
   }
 
+  // from_label is added by the backend; fall back to integer if an older response is cached
+  const fromTitle = diff.from_label ? `${diff.from_label} v${diff.from_version}` : `Version ${diff.from_version}`
+  const toTitle   = `${diff.label} v${diff.to_version}`
+
   return (
     <div className="card p-5 animate-slide-up">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <GitCompare className="w-4 h-4 text-slate-600" />
-        <h3 className="text-sm font-semibold text-slate-900">
-          Version {diff.from_version} → {diff.to_version} · {diff.label}
+        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5 flex-wrap">
+          <span className="text-slate-500">{fromTitle}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-slate-900">{toTitle}</span>
         </h3>
-        <div className="flex gap-2 ml-auto text-xs">
+        <div className="flex gap-2 ml-auto text-xs items-center">
           <span className="text-green-600 font-semibold">+{diff.total_added}</span>
           <span className="text-amber-600 font-semibold">~{diff.total_modified}</span>
           <span className="text-red-600   font-semibold">-{diff.total_removed}</span>
+          <button
+            onClick={onClose}
+            aria-label="Close diff"
+            className="ml-1 p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       </div>
       {diff.changes.length === 0 ? (
@@ -311,7 +325,7 @@ function RulebookInner() {
         </div>
       )}
 
-      {diff && <DiffView diff={diff} />}
+      {diff && <DiffView diff={diff} onClose={() => setDiff(null)} />}
 
       {/* ── Version list ── */}
       <div className="space-y-3">
@@ -347,11 +361,12 @@ function RulebookInner() {
                         <Zap className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">{activating === v.id ? 'Activating…' : 'Activate'}</span>
                       </button>
-                      {idx < versions.length - 1 && (
-                        <button onClick={() => handleDiff(versions[idx + 1].id, v.id)}
+                      {/* Diff against the currently active rulebook — direction: this (older) → active (newer). */}
+                      {active && active.id !== v.id && (
+                        <button onClick={() => handleDiff(v.id, active.id)}
                           disabled={diffLoading} className="btn-secondary text-xs py-1.5 px-2.5">
                           <GitCompare className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Diff</span>
+                          <span className="hidden sm:inline">Diff vs Active</span>
                         </button>
                       )}
                     </>

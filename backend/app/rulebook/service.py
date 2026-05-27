@@ -193,6 +193,7 @@ def diff_rulebook_versions(from_id: str, to_id: str, activated_by: str = None, a
     return RulebookDiffResult(
         from_version=from_version.version,
         to_version=to_version.version,
+        from_label=from_version.label,
         label=to_version.label,
         changes=changes,
         total_added=sum(1 for c in changes if c.change_type == "added"),

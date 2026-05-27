@@ -143,7 +143,8 @@ class RuleDiff(BaseModel):
 class RulebookDiffResult(BaseModel):
     from_version:   int
     to_version:     int
-    label:          str
+    from_label:     str             # "old" version label — needed so the UI can show both sides of the diff
+    label:          str             # "new" / to_version label (kept name for backward compat)
     changes:        List[RuleDiff]
     total_added:    int
     total_removed:  int
