@@ -18,6 +18,11 @@ export default function Settings() {
   // Otherwise visitors could enumerate authorised manager names + emails just by
   // clicking the button.
   const [showAddAuth,      setShowAddAuth]       = useState(false)
+  // Gate for Notification Triggers: toggles are hidden until the user
+  // authenticates — visitors should not see (let alone change) which
+  // notifications are enabled without proving they're a manager.
+  const [triggersUnlocked, setTriggersUnlocked]  = useState(false)
+  const [showTriggersAuth, setShowTriggersAuth]  = useState(false)
 
   useEffect(() => {
     Promise.all([settingsApi.getRecipients(), settingsApi.getAll()])
@@ -79,6 +84,15 @@ export default function Settings() {
           subtitle="Sign in to view the manager list"
           onLogin={() => { setShowAddAuth(false); setShowAddModal(true) }}
           onCancel={() => setShowAddAuth(false)}
+        />
+      )}
+
+      {showTriggersAuth && (
+        <UserLoginModal
+          title="Verify Identity"
+          subtitle="Sign in to view and edit notification triggers"
+          onLogin={() => { setShowTriggersAuth(false); setTriggersUnlocked(true) }}
+          onCancel={() => setShowTriggersAuth(false)}
         />
       )}
 
@@ -168,29 +182,48 @@ export default function Settings() {
         )}
       </div>
 
-      {/* ── Notification toggles ── */}
+      {/* ── Notification toggles (gated) ── */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-slate-600" />
           <h2 className="text-sm font-semibold text-slate-900">Notification Triggers</h2>
         </div>
-        {[
-          { label: 'Invoice Flagged',   description: 'Send email when an invoice fails validation checks',          value: notifyOnFlag,     set: setNotifyOnFlag     },
-          { label: 'Rulebook Updated',  description: 'Send diff email when a new rulebook version is activated',   value: notifyOnRulebook, set: setNotifyOnRulebook },
-        ].map(({ label, description, value, set }) => (
-          <div key={label} className="flex items-start justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
-            <div>
-              <p className="text-sm font-medium text-slate-900">{label}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+
+        {!triggersUnlocked ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+            <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Lock className="w-4 h-4 text-slate-500" />
             </div>
-            <button
-              onClick={() => set(v => !v)}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${value ? 'bg-slate-900' : 'bg-slate-300'}`}
-            >
-              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${value ? 'translate-x-4' : 'translate-x-1'}`} />
+            <div>
+              <p className="text-sm font-medium text-slate-700">Sign in to view triggers</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Notification triggers are visible only to authorised managers
+              </p>
+            </div>
+            <button onClick={() => setShowTriggersAuth(true)} className="btn-primary">
+              <Lock className="w-4 h-4" />
+              Unlock
             </button>
           </div>
-        ))}
+        ) : (
+          [
+            { label: 'Invoice Flagged',   description: 'Send email when an invoice fails validation checks',          value: notifyOnFlag,     set: setNotifyOnFlag     },
+            { label: 'Rulebook Updated',  description: 'Send diff email when a new rulebook version is activated',   value: notifyOnRulebook, set: setNotifyOnRulebook },
+          ].map(({ label, description, value, set }) => (
+            <div key={label} className="flex items-start justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
+              <div>
+                <p className="text-sm font-medium text-slate-900">{label}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+              </div>
+              <button
+                onClick={() => set(v => !v)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${value ? 'bg-slate-900' : 'bg-slate-300'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${value ? 'translate-x-4' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Save — triggers auth modal */}
