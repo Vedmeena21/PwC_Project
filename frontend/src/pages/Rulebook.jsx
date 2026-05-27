@@ -311,7 +311,10 @@ export default function Rulebook() {
         ) : (
           versions.map((v) => (
             <div key={v.id} className={cn('card overflow-hidden', v.is_active && 'border-green-300')}>
-              <div className="flex items-start gap-3 px-4 md:px-5 py-4">
+              <div
+                className="flex items-start gap-3 px-4 md:px-5 py-4 cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => setExpandedId(expandedId === v.id ? null : v.id)}
+              >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-slate-900 text-sm">{v.label} · v{v.version}</p>
@@ -322,7 +325,7 @@ export default function Rulebook() {
                     {v.notes && ` · ${v.notes}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
                   {isAdmin && !v.is_active && (
                     <>
                       <button
@@ -342,8 +345,10 @@ export default function Rulebook() {
                       )}
                     </>
                   )}
-                  <button onClick={() => setExpandedId(expandedId === v.id ? null : v.id)}
-                    className="btn-secondary text-xs py-1.5 px-2.5">
+                  <button
+                    onClick={() => setExpandedId(expandedId === v.id ? null : v.id)}
+                    className="btn-secondary text-xs py-1.5 px-2.5"
+                  >
                     {expandedId === v.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
                 </div>
