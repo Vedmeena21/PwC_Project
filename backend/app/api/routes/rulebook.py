@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 
 from app.rulebook.service import (
     list_rulebook_versions, get_rulebook_by_id,
@@ -8,6 +8,7 @@ from app.rulebook.service import (
 from app.models import RulebookCreateRequest
 from app.notifications.email import send_rulebook_updated_email
 from app.core.config import get_supabase
+from app.core.auth import require_admin
 
 router = APIRouter(prefix="/rulebook", tags=["rulebook"])
 
@@ -42,7 +43,7 @@ async def get_version(version_id: str):
 # ── POST /rulebook/ ───────────────────────────────────────────────────────────
 # Creates a new rulebook version (inactive by default).
 # The version is not applied until explicitly activated via /activate.
-@router.post("/")
+@router.post("/", dependencies=[Depends(require_admin)])
 async def create_version(request: RulebookCreateRequest):
     version = create_rulebook_version(request)
 
@@ -60,7 +61,7 @@ async def create_version(request: RulebookCreateRequest):
 # ── POST /rulebook/{version_id}/activate ─────────────────────────────────────
 # Activates a version, deactivating all others.
 # If a previous active version exists, triggers a diff and sends an email.
-@router.post("/{version_id}/activate")
+@router.post("/{version_id}/activate", dependencies=[Depends(require_admin)])
 async def activate_version(
     version_id: str,
     background_tasks: BackgroundTasks,

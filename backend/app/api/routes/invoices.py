@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 
 from app.core.config import get_supabase
 from app.core.config import get_settings
+from app.core.auth import require_admin
 from app.extraction.extractor import extract_invoice_data, SUPPORTED_EXTENSIONS
 from app.validation.engine import validate_invoice
 from app.rulebook.service import get_active_rulebook
@@ -383,7 +384,7 @@ async def get_invoice(invoice_id: str):
 # Useful when extraction_failed due to a transient Groq rate-limit or disconnect.
 # Also auto-corrects invoices whose status is extraction_failed but already have
 # valid recommendation data (status update failed at the very end of the pipeline).
-@router.post("/{invoice_id}/reprocess")
+@router.post("/{invoice_id}/reprocess", dependencies=[Depends(require_admin)])
 async def reprocess_invoice(invoice_id: str, background_tasks: BackgroundTasks):
     db       = get_supabase()
     settings = get_settings()
@@ -440,7 +441,7 @@ async def reprocess_invoice(invoice_id: str, background_tasks: BackgroundTasks):
 
 # ── POST /invoices/{invoice_id}/review ────────────────────────────────────────
 # Records the human reviewer's final decision (approved / rejected).
-@router.post("/{invoice_id}/review")
+@router.post("/{invoice_id}/review", dependencies=[Depends(require_admin)])
 async def review_invoice(invoice_id: str, action: ReviewAction):
     if action.action not in ("approved", "rejected"):
         raise HTTPException(status_code=400, detail="Action must be 'approved' or 'rejected'")
@@ -478,7 +479,7 @@ async def get_invoice_file_url(invoice_id: str):
 
 # ── DELETE /invoices/{invoice_id} ─────────────────────────────────────────────
 # Removes the invoice row + storage file. Cascade handles line items / checks.
-@router.delete("/{invoice_id}")
+@router.delete("/{invoice_id}", dependencies=[Depends(require_admin)])
 async def delete_invoice(invoice_id: str, deleted_by: str = "admin"):
     db = get_supabase()
     settings = get_settings()

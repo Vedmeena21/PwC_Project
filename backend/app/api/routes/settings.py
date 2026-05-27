@@ -2,10 +2,11 @@ import json
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from app.core.config import get_supabase
+from app.core.auth import require_admin
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -44,7 +45,7 @@ async def get_recipients():
 
 # ── PUT /settings/recipients ──────────────────────────────────────────────────
 # Replaces the entire recipients list (full overwrite, not append).
-@router.put("/recipients")
+@router.put("/recipients", dependencies=[Depends(require_admin)])
 async def update_recipients(body: RecipientUpdate):
     db = get_supabase()
     db.table("app_settings").update({
@@ -57,7 +58,7 @@ async def update_recipients(body: RecipientUpdate):
 # ── PUT /settings/{key} ───────────────────────────────────────────────────────
 # Updates a single boolean setting. Only EDITABLE_KEYS are allowed
 # to prevent arbitrary DB writes via this endpoint.
-@router.put("/{key}")
+@router.put("/{key}", dependencies=[Depends(require_admin)])
 async def update_setting(key: str, body: SettingUpdate):
     if key not in EDITABLE_KEYS:
         raise HTTPException(status_code=400, detail=f"Unknown or non-editable key: {key}")

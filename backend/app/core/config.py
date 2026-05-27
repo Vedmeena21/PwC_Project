@@ -23,6 +23,11 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:5173"
 
+    # Shared secret for write endpoints. Frontend sends it as X-Admin-Token.
+    # Empty string = auth disabled (dev-only fallback so local Uvicorn still
+    # works without the env var). In production this MUST be set on Render.
+    admin_token: str = ""
+
     class Config:
         env_file      = ".env"
         case_sensitive = False
