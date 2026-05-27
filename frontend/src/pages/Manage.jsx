@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { authApi } from '@/services/api'
+import { useNavigate } from 'react-router-dom'
+import { authApi, invoiceApi } from '@/services/api'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
+import StatusBadge from '@/components/ui/StatusBadge'
+import { formatDate } from '@/lib/utils'
 import {
   CheckCircle2, XCircle, Trash2, UserPlus, Loader2, Clock,
-  ShieldCheck, User as UserIcon, Eye, EyeOff, ChevronDown, ChevronUp
+  ShieldCheck, User as UserIcon, Eye, EyeOff, ChevronDown, ChevronUp,
+  AlertTriangle, FileText, ExternalLink
 } from 'lucide-react'
 
 const ROLE_BADGE = {
@@ -255,13 +259,97 @@ function AddUserForm({ onCreated }) {
   )
 }
 
+// ── Needs Review row ─────────────────────────────────────────────────────────
+function NeedsReviewRow({ inv, onAction }) {
+  const navigate  = useNavigate()
+  const [loading, setLoading] = useState(null) // 'approve' | 'reject'
+
+  async function act(verdict) {
+    setLoading(verdict)
+    await onAction(inv.id, verdict)
+    setLoading(null)
+  }
+
+  return (
+    <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-slate-100 rounded-md flex items-center justify-center flex-shrink-0">
+            <FileText className="w-3.5 h-3.5 text-slate-500" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-slate-900 text-sm font-medium truncate max-w-[180px]">
+              {inv.original_filename || inv.invoice_number || '—'}
+            </p>
+            {inv.original_filename && (
+              <p className="text-xs text-slate-400 truncate">{inv.invoice_number || ''}</p>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-slate-600 text-sm hidden sm:table-cell">
+        {inv.vendor_name || '—'}
+      </td>
+      <td className="px-4 py-3 text-slate-500 text-xs hidden md:table-cell">
+        {formatDate(inv.invoice_date)}
+      </td>
+      <td className="px-4 py-3 hidden lg:table-cell">
+        <p className="text-xs text-slate-500 line-clamp-2 max-w-[200px]">
+          {inv.summary || '—'}
+        </p>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => act('approved')}
+            disabled={loading !== null}
+            className="flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          >
+            {loading === 'approved' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+            Approve
+          </button>
+          <button
+            onClick={() => act('rejected')}
+            disabled={loading !== null}
+            className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          >
+            {loading === 'rejected' ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+            Reject
+          </button>
+          <button
+            onClick={() => navigate(`/invoices/${inv.id}`)}
+            className="text-slate-400 hover:text-[#EB8C00] transition-colors p-1"
+            title="View invoice"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 // ── Main Manage page ──────────────────────────────────────────────────────────
 export default function Manage() {
   const { user: currentUser } = useAuth()
   const { toast }             = useToast()
-  const [pending, setPending] = useState([])
-  const [users,   setUsers]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [pending,      setPending]      = useState([])
+  const [users,        setUsers]        = useState([])
+  const [flagged,      setFlagged]      = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [loadingFlags, setLoadingFlags] = useState(false)
+
+  const refreshFlagged = useCallback(async () => {
+    setLoadingFlags(true)
+    try {
+      const res = await invoiceApi.list({ status: 'flagged', limit: 50, view: 'all' })
+      setFlagged(res.invoices || [])
+    } catch {
+      // silently ignore — not critical
+    } finally {
+      setLoadingFlags(false)
+    }
+  }, [])
 
   const refresh = useCallback(async () => {
     try {
@@ -275,7 +363,7 @@ export default function Manage() {
     }
   }, [toast])
 
-  useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { refresh(); refreshFlagged() }, [refresh, refreshFlagged])
 
   async function handleApprove(id) {
     try { await authApi.approve(id); toast('User approved.', 'success'); refresh() }
@@ -290,6 +378,16 @@ export default function Manage() {
   async function handleDelete(id) {
     try { await authApi.delete(id); toast('User deleted.', 'success'); refresh() }
     catch (err) { toast(err.message, 'error') }
+  }
+
+  async function handleInvoiceAction(id, verdict) {
+    try {
+      await invoiceApi.review(id, { action: verdict, notes: '' })
+      toast(`Invoice ${verdict}.`, 'success')
+      refreshFlagged()
+    } catch (err) {
+      toast(err.message, 'error')
+    }
   }
 
   if (loading) {
@@ -330,6 +428,51 @@ export default function Manage() {
             {pending.map(u => (
               <PendingCard key={u.id} user={u} onApprove={handleApprove} onReject={handleReject} />
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Needs Review queue */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <h2 className="text-slate-900 font-semibold">Needs Review</h2>
+          {flagged.length > 0 && (
+            <span className="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-200">
+              {flagged.length}
+            </span>
+          )}
+        </div>
+
+        {loadingFlags ? (
+          <div className="card px-5 py-8 text-center">
+            <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
+          </div>
+        ) : flagged.length === 0 ? (
+          <div className="card px-5 py-8 text-center">
+            <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
+            <p className="text-slate-400 text-sm">No invoices awaiting review</p>
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/60">
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide">File Name</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden sm:table-cell">Vendor</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">Date</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">AI Summary</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {flagged.map(inv => (
+                    <NeedsReviewRow key={inv.id} inv={inv} onAction={handleInvoiceAction} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
