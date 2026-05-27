@@ -399,23 +399,21 @@ export default function Dashboard() {
             </div>
             <h2 className="text-sm font-semibold text-slate-900">How It Works</h2>
           </div>
-          <div className="flex flex-col gap-0">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3">
             {[
-              { icon: Upload,      step: '01', title: 'Upload Invoice',  color: 'bg-orange-50 text-[#EB8C00]' },
-              { icon: ScanText,    step: '02', title: 'AI Extraction',   color: 'bg-blue-50 text-blue-600'   },
-              { icon: ShieldCheck, step: '03', title: 'Rule Validation', color: 'bg-amber-50 text-amber-600' },
-              { icon: UserCheck,   step: '04', title: 'Human Review',    color: 'bg-green-50 text-green-600' },
-            ].map(({ icon: Icon, step, title, color }, i, arr) => (
-              <div key={step} className="flex items-center gap-2.5">
-                <div className="flex flex-col items-center self-stretch">
-                  <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', color)}>
-                    <Icon className="w-3 h-3" />
-                  </div>
-                  {i < arr.length - 1 && <div className="w-px flex-1 bg-slate-100 my-0.5" />}
+              { icon: Upload,      step: '01', title: 'Upload Invoice',  color: 'bg-orange-50 text-[#EB8C00]', desc: 'PDF stored securely and queued for processing.' },
+              { icon: ScanText,    step: '02', title: 'AI Extraction',   color: 'bg-blue-50 text-blue-600',    desc: 'Groq LLM extracts vendor, date, line items and PO reference.' },
+              { icon: ShieldCheck, step: '03', title: 'Rule Validation', color: 'bg-amber-50 text-amber-600',  desc: 'Extracted data checked against active rulebook — rates, quantities, grades.' },
+              { icon: UserCheck,   step: '04', title: 'Human Review',    color: 'bg-green-50 text-green-600',  desc: 'Admin confirms or overrides the AI verdict. Decision logged in audit trail.' },
+            ].map(({ icon: Icon, step, title, color, desc }) => (
+              <div key={step} className="flex items-start gap-2">
+                <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5', color)}>
+                  <Icon className="w-3 h-3" />
                 </div>
-                <div className={cn('flex items-center gap-2', i < arr.length - 1 ? 'pb-2' : '')}>
-                  <span className="text-[9px] font-bold text-slate-300 tracking-widest w-4">{step}</span>
-                  <p className="text-xs font-medium text-slate-700">{title}</p>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-300 tracking-widest leading-none mb-0.5">{step}</p>
+                  <p className="text-xs font-semibold text-slate-700 leading-snug">{title}</p>
+                  <p className="text-[10px] text-slate-400 leading-snug mt-0.5">{desc}</p>
                 </div>
               </div>
             ))}

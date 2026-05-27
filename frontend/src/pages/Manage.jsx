@@ -293,6 +293,9 @@ function NeedsReviewRow({ inv, onAction }) {
       <td className="px-4 py-3 text-slate-500 text-xs hidden md:table-cell">
         {formatDate(inv.invoice_date)}
       </td>
+      <td className="px-4 py-3 hidden md:table-cell">
+        <StatusBadge status={inv.status} />
+      </td>
       <td className="px-4 py-3 hidden lg:table-cell">
         <p className="text-xs text-slate-500 line-clamp-2 max-w-[200px]">
           {inv.summary || '—'}
@@ -342,8 +345,16 @@ export default function Manage() {
   const refreshFlagged = useCallback(async () => {
     setLoadingFlags(true)
     try {
-      const res = await invoiceApi.list({ status: 'flagged', limit: 50, view: 'all' })
-      setFlagged(res.invoices || [])
+      // Fetch both flagged (AI raised issues) and pending (AI approved, awaiting human sign-off)
+      const [resFlagged, resPending] = await Promise.all([
+        invoiceApi.list({ status: 'flagged', limit: 50, view: 'all' }),
+        invoiceApi.list({ status: 'pending', limit: 50, view: 'all' }),
+      ])
+      const combined = [
+        ...(resFlagged.invoices || []),
+        ...(resPending.invoices || []),
+      ].sort((a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at))
+      setFlagged(combined)
     } catch {
       // silently ignore — not critical
     } finally {
@@ -436,7 +447,7 @@ export default function Manage() {
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <h2 className="text-slate-900 font-semibold">Needs Review</h2>
+          <h2 className="text-slate-900 font-semibold">Invoices Awaiting Review</h2>
           {flagged.length > 0 && (
             <span className="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-200">
               {flagged.length}
@@ -462,6 +473,7 @@ export default function Manage() {
                     <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide">File Name</th>
                     <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden sm:table-cell">Vendor</th>
                     <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">Date</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">AI Verdict</th>
                     <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">AI Summary</th>
                     <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide">Action</th>
                   </tr>
