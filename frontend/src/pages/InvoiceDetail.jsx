@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, CheckCircle, XCircle, AlertCircle,
   Clock, FileText, ChevronDown, ChevronUp, User, Calendar, Hash, Trash2, RefreshCw,
+  ExternalLink,
 } from 'lucide-react'
 import { useInvoice } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
+import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
-import { UserLoginModal } from '@/components/ui/PasswordGate'
 import { formatDate, formatDateTime, formatCurrency, cn } from '@/lib/utils'
 
 // ── CheckIcon ─────────────────────────────────────────────────────────────────
@@ -64,15 +65,13 @@ export default function InvoiceDetail() {
   const { id }  = useParams()
   const navigate = useNavigate()
   const toast    = useToast()
+  const { isAdmin, user } = useAuth()
 
   // useInvoice polls automatically while status is "processing"
   const { data, loading, error, refetch } = useInvoice(id)
 
-  const [reviewerName, setReviewerName] = useState('')
-  const [reviewNotes,  setReviewNotes]  = useState('')
-  const [submitting,   setSubmitting]   = useState(false)
   const [showAudit,    setShowAudit]    = useState(false)
-  const [showDeleteAuth, setShowDeleteAuth] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting,     setDeleting]     = useState(false)
   const [reprocessing, setReprocessing] = useState(false)
 
@@ -89,12 +88,12 @@ export default function InvoiceDetail() {
     }
   }
 
-  const handleDelete = async (user) => {
-    setShowDeleteAuth(false)
+  const handleDelete = async () => {
+    setConfirmDelete(false)
     setDeleting(true)
     try {
-      await invoiceApi.delete(id, user.name)
-      toast({ type: 'success', message: `Invoice deleted by ${user.name}` })
+      await invoiceApi.delete(id)
+      toast({ type: 'success', message: 'Invoice deleted' })
       setTimeout(() => navigate('/invoices'), 500)
     } catch (e) {
       toast({ type: 'error', message: e.message })
@@ -158,15 +157,6 @@ export default function InvoiceDetail() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {showDeleteAuth && (
-        <UserLoginModal
-          title="Confirm Delete"
-          subtitle="Re-enter your credentials to delete this invoice"
-          onLogin={handleDelete}
-          onCancel={() => setShowDeleteAuth(false)}
-        />
-      )}
-
       {/* ── Back + title + delete ── */}
       <div className="flex items-start gap-3">
         <button onClick={() => navigate('/invoices')} className="btn-secondary mt-0.5 flex-shrink-0">
@@ -181,15 +171,30 @@ export default function InvoiceDetail() {
             {invoice?.vendor_name} · Uploaded {formatDateTime(invoice?.uploaded_at)}
           </p>
         </div>
-        <button
-          onClick={() => setShowDeleteAuth(true)}
-          disabled={deleting}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors flex-shrink-0 mt-0.5 disabled:opacity-50"
-          title="Delete invoice"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{deleting ? 'Deleting…' : 'Delete'}</span>
-        </button>
+        {isAdmin && (
+          confirmDelete ? (
+            <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <span className="text-xs text-red-500 font-medium">Delete?</span>
+              <button onClick={handleDelete} disabled={deleting}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                {deleting ? 'Deleting…' : 'Yes, delete'}
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors flex-shrink-0 mt-0.5 disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          )
+        )}
       </div>
 
       {/* ── Verdict / processing / failed banner ── */}
@@ -355,29 +360,29 @@ export default function InvoiceDetail() {
             )}
           </div>
 
-          {/* Human review panel — only visible when invoice needs a decision */}
+          {/* Awaiting review — direct admin to Manage page */}
           {isReviewable && (
-            <div className="card p-5 border-2 border-slate-200">
-              <h2 className="text-sm font-semibold text-slate-900 mb-1">Human Review</h2>
-              <p className="text-xs text-slate-500 mb-4">Final approval decision rests with you.</p>
-              <div className="space-y-3">
-                <div>
-                  <label className="label">Your Name *</label>
-                  <input className="input" placeholder="Enter your name"
-                    value={reviewerName} onChange={(e) => setReviewerName(e.target.value)} />
+            <div className="card p-5 border border-amber-200 bg-amber-50/40">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock className="w-4 h-4 text-amber-600" />
                 </div>
-                <div>
-                  <label className="label">Notes (optional)</label>
-                  <textarea className="input resize-none" rows={3} placeholder="Add any review notes…"
-                    value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} />
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1">
-                  <button onClick={() => handleReview('approved')} disabled={submitting} className="btn-success flex-1 justify-center">
-                    <CheckCircle className="w-4 h-4" /> Approve
-                  </button>
-                  <button onClick={() => handleReview('rejected')} disabled={submitting} className="btn-danger flex-1 justify-center">
-                    <XCircle className="w-4 h-4" /> Reject
-                  </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">Awaiting Human Review</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    The AI has completed its analysis. An admin must approve or reject this invoice.
+                  </p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => navigate('/manage')}
+                      className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-white"
+                      style={{ backgroundColor: '#EB8C00' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D04A02'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#EB8C00'}
+                    >
+                      Review in Manage <ExternalLink className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
