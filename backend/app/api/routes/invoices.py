@@ -333,20 +333,25 @@ async def list_invoices(
 
 # ── GET /invoices/stats/summary ───────────────────────────────────────────────
 # Aggregates invoice counts per status for the dashboard stat cards.
-# Uses PostgREST count="exact" per status — O(1) per status instead of O(N).
+# Note: head=True in the Supabase Python client does NOT populate .count reliably
+# (it returns 0 regardless of actual row count). We fetch all statuses in one
+# query and group in Python — single round-trip, no client bug.
 # Must be defined BEFORE /{invoice_id} to avoid route conflict.
 @router.get("/stats/summary")
 async def get_stats():
     db = get_supabase()
     statuses = ["pending", "processing", "approved", "rejected", "flagged", "extraction_failed"]
 
-    counts: dict = {}
-    for s in statuses:
-        res = db.table("invoices").select("id", count="exact", head=True).eq("status", s).execute()
-        counts[s] = res.count or 0
+    res = db.table("invoices").select("status").execute()
+    rows = res.data or []
 
-    total_res    = db.table("invoices").select("id", count="exact", head=True).execute()
-    counts["total"] = total_res.count or 0
+    counts: dict = {s: 0 for s in statuses}
+    for row in rows:
+        s = row.get("status")
+        if s in counts:
+            counts[s] += 1
+
+    counts["total"] = len(rows)
     return counts
 
 
@@ -370,6 +375,66 @@ async def get_invoice(invoice_id: str):
         "line_items":        line_items_res.data,
         "validation_checks": checks_res.data,
         "audit_trail":       audit_res.data,
+    }
+
+
+# ── POST /invoices/{invoice_id}/reprocess ────────────────────────────────────
+# Re-runs the full extraction + validation pipeline on a previously failed invoice.
+# Useful when extraction_failed due to a transient Groq rate-limit or disconnect.
+# Also auto-corrects invoices whose status is extraction_failed but already have
+# valid recommendation data (status update failed at the very end of the pipeline).
+@router.post("/{invoice_id}/reprocess")
+async def reprocess_invoice(invoice_id: str, background_tasks: BackgroundTasks):
+    db       = get_supabase()
+    settings = get_settings()
+
+    inv = db.table("invoices").select("pdf_path,status,id").eq("id", invoice_id).limit(1).execute()
+    if not inv.data:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    invoice = inv.data[0]
+
+    # If the invoice already has a recommendation (extraction actually succeeded but
+    # the status update failed), just fix the status and return — no need to re-run.
+    rec = db.table("invoice_recommendations").select("verdict").eq("invoice_id", invoice_id).limit(1).execute()
+    if rec.data:
+        existing_verdict = rec.data[0]["verdict"]
+        corrected_status = "pending" if existing_verdict == "approve" else "flagged"
+        db.table("invoices").update({"status": corrected_status}).eq("id", invoice_id).execute()
+        _log(db, invoice_id, "status_corrected", details={
+            "from": invoice["status"],
+            "to": corrected_status,
+            "reason": "recommendation already existed — status update had failed",
+        })
+        return {
+            "invoice_id": invoice_id,
+            "status": corrected_status,
+            "message": "Status corrected from existing recommendation data (no re-extraction needed)",
+        }
+
+    # Truly failed — download file from storage and re-run the full pipeline
+    pdf_path = invoice.get("pdf_path")
+    if not pdf_path:
+        raise HTTPException(status_code=400, detail="No file path stored for this invoice — cannot reprocess")
+
+    try:
+        file_bytes = db.storage.from_(settings.supabase_storage_bucket).download(pdf_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not retrieve invoice file from storage: {e}")
+
+    # Derive original filename from the storage path for correct parser routing
+    import os
+    filename = os.path.basename(pdf_path)
+
+    # Clear stale failed data before re-running
+    db.table("validation_results").delete().eq("invoice_id", invoice_id).execute()
+    _log(db, invoice_id, "reprocess_requested")
+
+    background_tasks.add_task(_process_invoice, invoice_id, file_bytes, filename)
+    return {
+        "invoice_id": invoice_id,
+        "status": "processing",
+        "message": "Invoice queued for reprocessing",
     }
 
 
