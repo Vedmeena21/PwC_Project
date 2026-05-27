@@ -23,6 +23,9 @@ export default function Settings() {
   // notifications are enabled without proving they're a manager.
   const [triggersUnlocked, setTriggersUnlocked]  = useState(false)
   const [showTriggersAuth, setShowTriggersAuth]  = useState(false)
+  // Gate for removing a recipient — visitors should not be able to evict
+  // active subscribers without proving they're a manager.
+  const [pendingDelete,    setPendingDelete]     = useState(null)
 
   useEffect(() => {
     Promise.all([settingsApi.getRecipients(), settingsApi.getAll()])
@@ -41,7 +44,15 @@ export default function Settings() {
     setShowAddModal(false)
   }
 
-  const removeEmail = (email) => setRecipients(r => r.filter(e => e !== email))
+  // Two-step delete: trash icon opens the auth modal; only after a valid
+  // manager login does the recipient get removed from local state.
+  // (Persisted on Save Settings, which also requires re-auth.)
+  const requestRemoveEmail = (email) => setPendingDelete(email)
+
+  const confirmRemoveEmail = () => {
+    setRecipients(r => r.filter(e => e !== pendingDelete))
+    setPendingDelete(null)
+  }
 
   // Save is gated — clicking Save shows auth modal first
   const handleSaveClick = () => setShowAuth(true)
@@ -93,6 +104,15 @@ export default function Settings() {
           subtitle="Sign in to view and edit notification triggers"
           onLogin={() => { setShowTriggersAuth(false); setTriggersUnlocked(true) }}
           onCancel={() => setShowTriggersAuth(false)}
+        />
+      )}
+
+      {pendingDelete && (
+        <UserLoginModal
+          title="Confirm Removal"
+          subtitle={`Sign in to remove ${pendingDelete} from recipients`}
+          onLogin={confirmRemoveEmail}
+          onCancel={() => setPendingDelete(null)}
         />
       )}
 
@@ -176,10 +196,10 @@ export default function Settings() {
                   <span className="text-sm text-slate-700 truncate">{email}</span>
                 </div>
                 <button
-                  onClick={() => removeEmail(email)}
+                  onClick={() => requestRemoveEmail(email)}
                   className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2"
                   aria-label={`Remove ${email}`}
-                  title="Remove recipient"
+                  title="Remove recipient (requires manager login)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

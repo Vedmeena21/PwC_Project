@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Lock, User } from 'lucide-react'
+import { Lock, User, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ── Authorised users ──────────────────────────────────────────────────────────
@@ -151,9 +151,18 @@ export function RulebookLoginGate({ onLogin }) {
 export function UserLoginModal({ title = 'Confirm Identity', subtitle = 'Re-enter your credentials to proceed', onLogin, onCancel }) {
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
+  const [showPwd,  setShowPwd]  = useState(false)
   const [error,    setError]    = useState('')
 
+  // Both fields required — disables Confirm and short-circuits Enter.
+  const canSubmit = email.trim() !== '' && password !== ''
+
   const attempt = () => {
+    if (!canSubmit) {
+      setError('Both email and password are required')
+      setTimeout(() => setError(''), 2500)
+      return
+    }
     const user = loginUser(email, password)
     if (user) {
       onLogin(user)
@@ -178,9 +187,10 @@ export function UserLoginModal({ title = 'Confirm Identity', subtitle = 'Re-ente
         </div>
         <div className="space-y-2.5">
           <div>
-            <label className="label">Email</label>
+            <label className="label">Email <span className="text-red-500">*</span></label>
             <input
               type="email"
+              required
               className={cn('input w-full', error && 'border-red-400')}
               placeholder="your@email.com"
               value={email}
@@ -190,20 +200,38 @@ export function UserLoginModal({ title = 'Confirm Identity', subtitle = 'Re-ente
             />
           </div>
           <div>
-            <label className="label">Password</label>
-            <input
-              type="password"
-              className={cn('input w-full', error && 'border-red-400')}
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && attempt()}
-            />
+            <label className="label">Password <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <input
+                type={showPwd ? 'text' : 'password'}
+                required
+                className={cn('input w-full pr-10', error && 'border-red-400')}
+                placeholder="Your password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && attempt()}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                tabIndex={-1}
+                aria-label={showPwd ? 'Hide password' : 'Show password'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
+              >
+                {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-2 pt-1">
             <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button onClick={attempt} className="btn-primary flex-1 justify-center">Confirm</button>
+            <button
+              onClick={attempt}
+              disabled={!canSubmit}
+              className="btn-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Confirm
+            </button>
           </div>
         </div>
       </div>
