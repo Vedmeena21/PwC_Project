@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, BookOpen, Settings, Zap, Users, LogOut, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, FileText, BookOpen, Settings, Users, LogOut, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
@@ -22,17 +22,17 @@ function NavItem({ to, label, icon: Icon, end }) {
         cn(
           'group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
           isActive
-            ? 'bg-slate-800 text-white shadow-sm'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            ? 'bg-orange-50 text-[#D04A02]'
+            : 'text-[#464646] hover:text-[#2D2D2D] hover:bg-gray-50'
         )
       }
     >
       {({ isActive }) => (
         <>
           {isActive && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-brand-500 rounded-r-full" />
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#EB8C00] rounded-r-full" />
           )}
-          <Icon className={cn('w-4 h-4 flex-shrink-0 transition-colors', isActive && 'text-brand-400')} />
+          <Icon className={cn('w-4 h-4 flex-shrink-0 transition-colors', isActive ? 'text-[#EB8C00]' : 'text-gray-400')} />
           {label}
         </>
       )}
@@ -61,25 +61,26 @@ function ProfileChip({ onSignout }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800/60 transition-colors text-left"
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
       >
-        {/* Avatar circle */}
-        <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">
+        {/* Avatar circle — PwC orange */}
+        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
+          style={{ backgroundColor: '#EB8C00' }}>
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white text-xs font-medium truncate">{label}</p>
-          <p className="text-slate-500 text-xs">{roleTag}</p>
+          <p className="text-[#2D2D2D] text-xs font-semibold truncate">{label}</p>
+          <p className="text-gray-400 text-xs">{roleTag}</p>
         </div>
-        <ChevronDown className={cn('w-3.5 h-3.5 text-slate-500 transition-transform flex-shrink-0', open && 'rotate-180')} />
+        <ChevronDown className={cn('w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0', open && 'rotate-180')} />
       </button>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
           <button
             onClick={() => { setOpen(false); onSignout() }}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-slate-700 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign out
@@ -106,14 +107,19 @@ export default function Sidebar() {
   return (
     <>
       {/* ── Desktop sidebar (hidden on mobile) ── */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 bg-gradient-to-b from-slate-950 to-slate-900 flex-col z-30 border-r border-slate-800/50">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-800/70">
-          <div className="w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-brand-500/20">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-white text-sm font-semibold leading-tight">Invoice Approval</p>
-            <p className="text-slate-500 text-xs">Automation System</p>
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col z-30 border-r border-gray-200 bg-white">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+          {/* PwC wordmark */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-baseline">
+              <span className="text-[#2D2D2D] text-xl font-black tracking-tight leading-none">Pw</span>
+              <span className="text-[#EB8C00] text-xl font-black tracking-tight leading-none">C</span>
+            </div>
+            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <div>
+              <p className="text-[#2D2D2D] text-[10px] font-bold leading-tight">Invoice Approval</p>
+              <p className="text-gray-400 text-[9px] leading-tight">Automation System</p>
+            </div>
           </div>
         </div>
 
@@ -123,27 +129,25 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div className="px-3 pb-3 border-t border-slate-800 pt-2">
+        <div className="px-3 pb-3 border-t border-gray-100 pt-2">
           <ProfileChip onSignout={handleSignout} />
         </div>
       </aside>
 
       {/* ── Mobile top bar ── */}
-      <header className="md:hidden fixed top-0 inset-x-0 h-14 bg-slate-950 flex items-center justify-between px-4 z-30 border-b border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Zap className="w-3.5 h-3.5 text-white" />
-          </div>
-          <p className="text-white text-sm font-semibold">Invoice Approval</p>
+      <header className="md:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30">
+        <div className="flex items-center gap-2">
+          <span className="text-[#2D2D2D] text-lg font-black tracking-tight">Pw</span>
+          <span className="text-[#EB8C00] text-lg font-black tracking-tight -ml-1">C</span>
+          <span className="text-[#2D2D2D] text-sm font-medium ml-1">Invoice Approval</span>
         </div>
-        {/* Mobile signout */}
-        <button onClick={handleSignout} className="text-slate-400 hover:text-red-400 transition-colors p-1">
+        <button onClick={handleSignout} className="text-gray-400 hover:text-red-500 transition-colors p-1">
           <LogOut className="w-4 h-4" />
         </button>
       </header>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-950 border-t border-slate-800 z-30 flex">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-30 flex">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -152,13 +156,13 @@ export default function Sidebar() {
             className={({ isActive }) =>
               cn(
                 'flex-1 flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors duration-150',
-                isActive ? 'text-white' : 'text-slate-500'
+                isActive ? 'text-[#EB8C00]' : 'text-gray-400'
               )
             }
           >
             {({ isActive }) => (
               <>
-                <span className={cn('w-8 h-8 flex items-center justify-center rounded-lg transition-colors', isActive && 'bg-slate-800')}>
+                <span className={cn('w-8 h-8 flex items-center justify-center rounded-lg transition-colors', isActive && 'bg-orange-50')}>
                   <Icon className="w-4 h-4" />
                 </span>
                 {label}

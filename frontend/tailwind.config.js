@@ -5,17 +5,29 @@ export default {
   theme: {
     extend: {
       colors: {
+        // PwC brand orange palette
         brand: {
-          50:  '#f0f9ff',
-          100: '#e0f2fe',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          900: '#0c4a6e',
+          50:  '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#EB8C00',   // PwC primary orange
+          600: '#D04A02',   // PwC dark orange (hover)
+          700: '#B86E00',   // PwC deeper orange
+          800: '#92400e',
+          900: '#78350f',
+        },
+        pwc: {
+          orange: '#EB8C00',
+          darkorange: '#D04A02',
+          red: '#E0301E',
+          burgundy: '#A32020',
+          charcoal: '#2D2D2D',
+          gray: '#464646',
         },
         slate: {
-          950: '#020617',
+          950: '#1a1a1a',   // PwC near-black (charcoal-tinted)
         },
       },
       fontFamily: {
