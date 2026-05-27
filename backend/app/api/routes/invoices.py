@@ -379,6 +379,62 @@ async def get_stats(view: str = "all", current=Depends(require_user)):
     return counts
 
 
+# ── GET /invoices/activity/recent ────────────────────────────────────────────
+# Returns the last N audit_log entries that have an invoice_id, joined with
+# the invoice number + vendor so the dashboard can show a meaningful feed.
+# Must be defined BEFORE /{invoice_id} to avoid route conflict.
+@router.get("/activity/recent")
+async def recent_activity(limit: int = 8, view: str = "all", current=Depends(require_user)):
+    db = get_supabase()
+    scope_to_user = current["role"] != "admin" or view == "mine"
+
+    # Fetch recent audit log rows that are invoice-related
+    q = (
+        db.table("audit_log")
+        .select("id, invoice_id, action, actor, details, created_at")
+        .not_.is_("invoice_id", "null")
+        .order("created_at", desc=True)
+        .limit(limit * 3)   # fetch more then filter, since we scope after
+    )
+    rows = q.execute().data or []
+
+    if not rows:
+        return {"activity": []}
+
+    # Gather invoice ids so we can fetch invoice_number + vendor in one shot
+    invoice_ids = list({r["invoice_id"] for r in rows})
+    inv_res = (
+        db.table("invoice_summary")
+        .select("id, invoice_number, vendor_name, uploaded_by")
+        .in_("id", invoice_ids)
+        .execute()
+    )
+    inv_map = {i["id"]: i for i in (inv_res.data or [])}
+
+    # Filter by ownership if scoped, then trim to limit
+    activity = []
+    for r in rows:
+        inv = inv_map.get(r["invoice_id"])
+        if not inv:
+            continue
+        if scope_to_user and inv.get("uploaded_by") != current["id"]:
+            continue
+        activity.append({
+            "id":             r["id"],
+            "invoice_id":     r["invoice_id"],
+            "invoice_number": inv.get("invoice_number", "—"),
+            "vendor_name":    inv.get("vendor_name", "—"),
+            "action":         r["action"],
+            "actor":          r["actor"],
+            "details":        r["details"],
+            "created_at":     r["created_at"],
+        })
+        if len(activity) >= limit:
+            break
+
+    return {"activity": activity}
+
+
 # ── Ownership check helper ───────────────────────────────────────────────────
 # Owner or admin only. Used by every per-invoice endpoint to ensure a regular
 # user can't read or mutate another user's invoice by guessing the URL.

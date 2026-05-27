@@ -74,6 +74,7 @@ export const invoiceApi = {
   delete:    (id)          => api.delete(`/invoices/${id}`),
   reprocess: (id)          => api.post(`/invoices/${id}/reprocess`),
   stats:     (params = {}) => api.get('/invoices/stats/summary', { params }),
+  activity:  (params = {}) => api.get('/invoices/activity/recent', { params }),
   fileUrl:   (id)          => api.get(`/invoices/${id}/file-url`),
 }
 

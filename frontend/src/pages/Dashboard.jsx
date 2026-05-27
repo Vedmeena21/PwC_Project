@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, ShieldCheck, BarChart2 } from 'lucide-react'
+import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, Upload, ChevronRight, ArrowUpRight, Activity } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useStats, useInvoices } from '@/hooks/useApi'
 import { invoiceApi } from '@/services/api'
@@ -11,6 +11,26 @@ import UploadZone from '@/components/ui/UploadZone'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { InvoiceRowSkeleton, StatCardSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
+
+// ── Activity feed helpers ─────────────────────────────────────────────────────
+const ACTION_CONFIG = {
+  uploaded:           { icon: '↑', color: 'text-slate-400', label: 'uploaded'          },
+  processing_started: { icon: '⟳', color: 'text-blue-400',  label: 'started processing' },
+  validated:          { icon: '✓', color: 'text-green-500', label: 'validated by AI'   },
+  reviewed:           { icon: '★', color: 'text-[#EB8C00]', label: 'reviewed'           },
+  duplicate_detected: { icon: '⊘', color: 'text-red-400',   label: 'rejected — duplicate' },
+  processing_failed:  { icon: '✕', color: 'text-red-400',   label: 'extraction failed' },
+  deleted:            { icon: '−', color: 'text-slate-300',  label: 'deleted'           },
+  _default:           { icon: '·', color: 'text-slate-300',  label: ''                  },
+}
+
+function timeAgo(iso) {
+  const mins = Math.round((Date.now() - new Date(iso)) / 60000)
+  if (mins < 1)    return 'just now'
+  if (mins < 60)   return `${mins}m`
+  if (mins < 1440) return `${Math.round(mins / 60)}h`
+  return `${Math.round(mins / 1440)}d`
+}
 
 // Status → colour. Keyed by name so colours don't shift when a slice is filtered out
 // (previously the colours were positional and Pending would render amber whenever
@@ -230,7 +250,17 @@ export default function Dashboard() {
 
   const { stats, loading: statsLoading }           = useStats(effectiveView)
   const { invoices, loading: invLoading, refetch } = useInvoices({ limit: 6, view: effectiveView })
-  const [uploading, setUploading]                  = useState(false)
+  const [uploading,  setUploading]  = useState(false)
+  const [activity,   setActivity]   = useState([])
+  const [actLoading, setActLoading] = useState(true)
+
+  useEffect(() => {
+    setActLoading(true)
+    invoiceApi.activity({ limit: 7, view: effectiveView })
+      .then(d => setActivity(d.activity || []))
+      .catch(() => {})
+      .finally(() => setActLoading(false))
+  }, [effectiveView])
 
   const approvalRate  = stats?.total > 0 ? Math.round((stats.approved / stats.total) * 100) : null
   const rejectionRate = stats?.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : null
@@ -361,64 +391,44 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* AI Insights */}
-        <div className="card p-5">
+        {/* Recent Activity */}
+        <div className="card p-5 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
-              <BarChart2 className="w-3.5 h-3.5 text-slate-600" />
+              <Activity className="w-3.5 h-3.5 text-slate-600" />
             </div>
-            <h2 className="text-sm font-semibold text-slate-900">AI Insights</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Recent Activity</h2>
           </div>
-          {!stats || stats.total === 0 ? (
-            <div className="h-32 flex items-center justify-center text-slate-400 text-sm">No data yet</div>
+          {actLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="skeleton h-8 rounded-lg" />)}
+            </div>
+          ) : activity.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">No activity yet</div>
           ) : (
-            <div className="space-y-4">
-              {/* Pass rate */}
-              {(() => {
-                const decided  = (stats.approved ?? 0) + (stats.rejected ?? 0)
-                const passRate = decided > 0 ? Math.round((stats.approved / decided) * 100) : null
+            <div className="space-y-2.5 overflow-y-auto">
+              {activity.map((a) => {
+                const cfg = ACTION_CONFIG[a.action] || ACTION_CONFIG._default
                 return (
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-xs text-slate-600">Approval rate</span>
-                      <span className="text-xs font-bold text-green-600">{passRate != null ? `${passRate}%` : '—'}</span>
+                  <div
+                    key={a.id}
+                    onClick={() => navigate(`/invoices/${a.invoice_id}`)}
+                    className="flex items-start gap-2.5 cursor-pointer hover:bg-slate-50 rounded-lg px-1 py-1 -mx-1 transition-colors"
+                  >
+                    <span className={cn('mt-0.5 text-sm flex-shrink-0', cfg.color)}>{cfg.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-700 leading-snug">
+                        <span className="font-medium">{a.invoice_number}</span>
+                        {' '}<span className="text-slate-400">{cfg.label}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                        {a.actor}{a.vendor_name && a.vendor_name !== 'Processing...' ? ` · ${a.vendor_name}` : ''}
+                      </p>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-500 rounded-full transition-all duration-700"
-                        style={{ width: passRate != null ? `${passRate}%` : '0%' }} />
-                    </div>
+                    <span className="text-[10px] text-slate-300 flex-shrink-0 mt-0.5">{timeAgo(a.created_at)}</span>
                   </div>
                 )
-              })()}
-              {/* AI flag rate */}
-              {(() => {
-                const flagRate = stats.total > 0 ? Math.round(((stats.flagged ?? 0) / stats.total) * 100) : null
-                return (
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-xs text-slate-600">AI flag rate</span>
-                      <span className={cn('text-xs font-bold', flagRate > 30 ? 'text-red-500' : 'text-amber-600')}>{flagRate != null ? `${flagRate}%` : '—'}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={cn('h-full rounded-full transition-all duration-700', flagRate > 30 ? 'bg-red-400' : 'bg-amber-400')}
-                        style={{ width: flagRate != null ? `${flagRate}%` : '0%' }} />
-                    </div>
-                  </div>
-                )
-              })()}
-              {/* Summary counts */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                {[
-                  { label: 'Awaiting',  value: stats.pending  ?? 0, color: 'text-blue-600'  },
-                  { label: 'Flagged',   value: stats.flagged  ?? 0, color: 'text-amber-600' },
-                  { label: 'Failed',    value: stats.extraction_failed ?? 0, color: 'text-slate-500' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="text-center bg-slate-50 rounded-lg py-2">
-                    <p className={cn('text-base font-bold tabular-nums', color)}>{value}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{label}</p>
-                  </div>
-                ))}
-              </div>
+              })}
             </div>
           )}
         </div>
