@@ -344,7 +344,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Middle row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
         {/* Upload */}
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -393,7 +393,7 @@ export default function Dashboard() {
 
         {/* How it works */}
         <div className="card p-5">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
               <Activity className="w-3.5 h-3.5 text-slate-600" />
             </div>
@@ -401,21 +401,21 @@ export default function Dashboard() {
           </div>
           <div className="flex flex-col gap-0">
             {[
-              { icon: Upload,     step: '01', title: 'Upload Invoice',  color: 'bg-orange-50 text-[#EB8C00]' },
-              { icon: ScanText,   step: '02', title: 'AI Extraction',   color: 'bg-blue-50 text-blue-600'   },
-              { icon: ShieldCheck,step: '03', title: 'Rule Validation', color: 'bg-amber-50 text-amber-600' },
-              { icon: UserCheck,  step: '04', title: 'Human Review',    color: 'bg-green-50 text-green-600' },
+              { icon: Upload,      step: '01', title: 'Upload Invoice',  color: 'bg-orange-50 text-[#EB8C00]' },
+              { icon: ScanText,    step: '02', title: 'AI Extraction',   color: 'bg-blue-50 text-blue-600'   },
+              { icon: ShieldCheck, step: '03', title: 'Rule Validation', color: 'bg-amber-50 text-amber-600' },
+              { icon: UserCheck,   step: '04', title: 'Human Review',    color: 'bg-green-50 text-green-600' },
             ].map(({ icon: Icon, step, title, color }, i, arr) => (
-              <div key={step} className="flex items-center gap-3">
+              <div key={step} className="flex items-center gap-2.5">
                 <div className="flex flex-col items-center self-stretch">
-                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', color)}>
-                    <Icon className="w-3.5 h-3.5" />
+                  <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', color)}>
+                    <Icon className="w-3 h-3" />
                   </div>
-                  {i < arr.length - 1 && <div className="w-px flex-1 bg-slate-100 my-1" />}
+                  {i < arr.length - 1 && <div className="w-px flex-1 bg-slate-100 my-0.5" />}
                 </div>
-                <div className={cn('flex items-center gap-2', i < arr.length - 1 ? 'pb-3' : '')}>
-                  <span className="text-[10px] font-bold text-slate-300 tracking-widest w-5">{step}</span>
-                  <p className="text-sm font-medium text-slate-700">{title}</p>
+                <div className={cn('flex items-center gap-2', i < arr.length - 1 ? 'pb-2' : '')}>
+                  <span className="text-[9px] font-bold text-slate-300 tracking-widest w-4">{step}</span>
+                  <p className="text-xs font-medium text-slate-700">{title}</p>
                 </div>
               </div>
             ))}
