@@ -8,7 +8,7 @@ from app.rulebook.service import (
 from app.models import RulebookCreateRequest
 from app.notifications.email import send_rulebook_updated_email
 from app.core.config import get_supabase
-from app.core.auth import require_admin
+from app.auth.dependencies import require_admin
 
 router = APIRouter(prefix="/rulebook", tags=["rulebook"])
 

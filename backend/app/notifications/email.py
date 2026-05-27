@@ -1,6 +1,6 @@
 import json
 import resend
-from typing import List
+from typing import List, Optional
 
 from app.core.config import get_settings
 from app.models import RulebookDiffResult
@@ -302,4 +302,82 @@ def send_rulebook_updated_email(diff: RulebookDiffResult) -> bool:
         subject=f"📋 Rulebook Updated — {diff.label} v{diff.to_version} · Activated by {activated_by}",
         html=_email_shell(inner),
         recipients=recipients,
+    )
+
+
+# ── Email 3: New user signup awaiting approval ────────────────────────────────
+# Sent to the admin email when a new user submits the signup form.
+# Admin reviews and approves / rejects from the Manage Users page.
+def send_signup_request_email(
+    new_user_email: str,
+    new_user_name:  str,
+    signup_note:    Optional[str],
+) -> bool:
+    settings = get_settings()
+    if not settings.admin_email:
+        return False
+
+    note_block = ""
+    if signup_note:
+        note_block = f"""
+        <tr>
+          <td style="padding:0 32px 16px;">
+            <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#374151;
+                      text-transform:uppercase;letter-spacing:0.5px;">Message from applicant</p>
+            <div style="background:#f8fafc;border-left:3px solid #0f172a;
+                        padding:12px 16px;border-radius:4px;font-size:13px;color:#334155;
+                        font-style:italic;">
+              "{signup_note}"
+            </div>
+          </td>
+        </tr>"""
+
+    inner = f"""
+    {_header_block("Invoice Approval System", "New User Access Request")}
+    <tr>
+      <td style="background:#0ea5e9;padding:16px 32px;">
+        <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">
+          {new_user_name} is requesting access
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:24px 32px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="background:#f8fafc;border-radius:8px;padding:16px;">
+          <tr>
+            <td style="font-size:13px;color:#64748b;padding:4px 0;">Name</td>
+            <td style="font-size:13px;color:#0f172a;font-weight:600;text-align:right;">
+              {new_user_name}
+            </td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;color:#64748b;padding:4px 0;">Email</td>
+            <td style="font-size:13px;color:#0f172a;font-weight:600;text-align:right;">
+              {new_user_email}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {note_block}
+    <tr>
+      <td style="padding:24px 32px 32px;">
+        <p style="margin:0 0 16px;font-size:13px;color:#64748b;">
+          Review this request and approve or reject the user from the Manage Users page.
+        </p>
+        <a href="{settings.frontend_url}/manage"
+           style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;
+                  padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">
+          Review Request →
+        </a>
+      </td>
+    </tr>
+    {_footer_block("This applicant cannot log in until you approve them.")}
+    """
+
+    return _send(
+        subject=f"🔔 New access request — {new_user_name} ({new_user_email})",
+        html=_email_shell(inner),
+        recipients=[settings.admin_email],
     )

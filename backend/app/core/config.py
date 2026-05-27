@@ -23,10 +23,21 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:5173"
 
-    # Shared secret for write endpoints. Frontend sends it as X-Admin-Token.
-    # Empty string = auth disabled (dev-only fallback so local Uvicorn still
-    # works without the env var). In production this MUST be set on Render.
+    # Legacy shared secret — kept for backwards compatibility during the
+    # auth migration, but new endpoints use JWT (see jwt_secret below).
     admin_token: str = ""
+
+    # JWT signing secret + algorithm. Tokens are HS256-signed and stored
+    # client-side; on every authenticated request the backend re-verifies
+    # the signature and pulls the user from the database to confirm the
+    # account still exists and is approved.
+    jwt_secret:        str = "change-me-in-production"
+    jwt_algorithm:     str = "HS256"
+    jwt_expire_hours:  int = 24 * 7   # 7-day sessions
+
+    # Email address the "new user signup" notification goes to (the admin
+    # who can approve / reject the request). Defaults to the seed admin.
+    admin_email: str = "ved@example.com"
 
     class Config:
         env_file      = ".env"

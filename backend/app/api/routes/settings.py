@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from app.core.config import get_supabase
-from app.core.auth import require_admin
+from app.auth.dependencies import require_admin
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

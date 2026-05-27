@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks,
 
 from app.core.config import get_supabase
 from app.core.config import get_settings
-from app.core.auth import require_admin
+from app.auth.dependencies import require_user, require_admin
 from app.extraction.extractor import extract_invoice_data, SUPPORTED_EXTENSIONS
 from app.validation.engine import validate_invoice
 from app.rulebook.service import get_active_rulebook
@@ -212,8 +212,13 @@ def _process_invoice(invoice_id: str, file_bytes: bytes, filename: str = "invoic
 # ── POST /invoices/upload ─────────────────────────────────────────────────────
 # Accepts a PDF, stores it in Supabase Storage, creates the invoice row,
 # then hands off to the background task and returns immediately.
+# uploaded_by is set to the current user so per-user listing works downstream.
 @router.post("/upload")
-async def upload_invoice(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload_invoice(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    current=Depends(require_user),
+):
     # Validate file extension against the supported set
     import os
     ext = os.path.splitext(file.filename or "")[-1].lower()
@@ -274,6 +279,7 @@ async def upload_invoice(background_tasks: BackgroundTasks, file: UploadFile = F
         "pdf_path":       storage_path,
         "pdf_url":        public_url,
         "status":         "pending",
+        "uploaded_by":    current["id"],
     }).execute()
 
     invoice_id = invoice_res.data[0]["id"]
@@ -294,40 +300,46 @@ async def upload_invoice(background_tasks: BackgroundTasks, file: UploadFile = F
 # Uses the invoice_summary view (joins recommendations + rulebook version).
 # Supports filtering by status, search across invoice_number/vendor/po,
 # and pagination via limit + offset.
+#
+# Ownership scoping:
+#   - Regular users always see only their own uploads (view param ignored).
+#   - Admins see everything by default. Pass view=mine to switch to their
+#     own uploads (powers the dashboard's Admin view ↔ My view toggle).
 @router.get("/")
 async def list_invoices(
     status: str = None,
     search: str = None,
     limit: int  = 50,
     offset: int = 0,
+    view: str   = "all",
+    current=Depends(require_user),
 ):
     db = get_supabase()
 
-    # Get total count first (for pagination UI). PostgREST exposes the count
-    # via a separate query — cheap as long as we only ask for one column.
-    count_q = db.table("invoice_summary").select("id", count="exact")
-    if status:
-        count_q = count_q.eq("status", status)
-    if search:
-        # PostgREST `or` with `ilike` on multiple columns
-        pattern = f"%{search}%"
-        count_q = count_q.or_(
-            f"invoice_number.ilike.{pattern},vendor_name.ilike.{pattern},po_reference.ilike.{pattern}"
-        )
-    count_res = count_q.execute()
-    total     = count_res.count or 0
+    # Decide whether to scope to the current user. The view query param is
+    # only honoured for admins; non-admins are always scoped to themselves.
+    scope_to_user = current["role"] != "admin" or view == "mine"
 
-    # Then fetch the page
-    query = db.table("invoice_summary").select("*").order("uploaded_at", desc=True) \
-              .range(offset, offset + limit - 1)
-    if status:
-        query = query.eq("status", status)
-    if search:
-        pattern = f"%{search}%"
-        query = query.or_(
-            f"invoice_number.ilike.{pattern},vendor_name.ilike.{pattern},po_reference.ilike.{pattern}"
-        )
-    res = query.execute()
+    def _apply_filters(q):
+        if scope_to_user:
+            q = q.eq("uploaded_by", current["id"])
+        if status:
+            q = q.eq("status", status)
+        if search:
+            pattern = f"%{search}%"
+            q = q.or_(
+                f"invoice_number.ilike.{pattern},vendor_name.ilike.{pattern},po_reference.ilike.{pattern}"
+            )
+        return q
+
+    count_res = _apply_filters(
+        db.table("invoice_summary").select("id", count="exact")
+    ).execute()
+    total = count_res.count or 0
+
+    res = _apply_filters(
+        db.table("invoice_summary").select("*").order("uploaded_at", desc=True)
+    ).range(offset, offset + limit - 1).execute()
 
     return {"invoices": res.data, "total": total, "limit": limit, "offset": offset}
 
@@ -339,12 +351,15 @@ async def list_invoices(
 # query and group in Python — single round-trip, no client bug.
 # Must be defined BEFORE /{invoice_id} to avoid route conflict.
 @router.get("/stats/summary")
-async def get_stats():
+async def get_stats(view: str = "all", current=Depends(require_user)):
     db = get_supabase()
     statuses = ["pending", "processing", "approved", "rejected", "flagged", "extraction_failed"]
 
-    res = db.table("invoices").select("status").execute()
-    rows = res.data or []
+    scope_to_user = current["role"] != "admin" or view == "mine"
+    q = db.table("invoices").select("status")
+    if scope_to_user:
+        q = q.eq("uploaded_by", current["id"])
+    rows = (q.execute().data or [])
 
     counts: dict = {s: 0 for s in statuses}
     for row in rows:
@@ -356,15 +371,28 @@ async def get_stats():
     return counts
 
 
+# ── Ownership check helper ───────────────────────────────────────────────────
+# Owner or admin only. Used by every per-invoice endpoint to ensure a regular
+# user can't read or mutate another user's invoice by guessing the URL.
+def _assert_can_access(invoice: dict, current: dict):
+    if current["role"] == "admin":
+        return
+    if invoice.get("uploaded_by") != current["id"]:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+
 # ── GET /invoices/{invoice_id} ────────────────────────────────────────────────
 # Returns full invoice detail: metadata + line items + checks + audit trail.
 @router.get("/{invoice_id}")
-async def get_invoice(invoice_id: str):
+async def get_invoice(invoice_id: str, current=Depends(require_user)):
     db = get_supabase()
 
     invoice_res = db.table("invoice_summary").select("*").eq("id", invoice_id).limit(1).execute()
     if not invoice_res.data:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    invoice = invoice_res.data[0]
+    _assert_can_access(invoice, current)
 
     # Fetch all related data in one go
     line_items_res = db.table("invoice_line_items").select("*").eq("invoice_id", invoice_id).execute()
@@ -372,7 +400,7 @@ async def get_invoice(invoice_id: str):
     audit_res      = db.table("audit_log").select("*").eq("invoice_id", invoice_id).order("created_at").execute()
 
     return {
-        "invoice":           invoice_res.data[0],
+        "invoice":           invoice,
         "line_items":        line_items_res.data,
         "validation_checks": checks_res.data,
         "audit_trail":       audit_res.data,
@@ -384,16 +412,21 @@ async def get_invoice(invoice_id: str):
 # Useful when extraction_failed due to a transient Groq rate-limit or disconnect.
 # Also auto-corrects invoices whose status is extraction_failed but already have
 # valid recommendation data (status update failed at the very end of the pipeline).
-@router.post("/{invoice_id}/reprocess", dependencies=[Depends(require_admin)])
-async def reprocess_invoice(invoice_id: str, background_tasks: BackgroundTasks):
+@router.post("/{invoice_id}/reprocess")
+async def reprocess_invoice(
+    invoice_id: str,
+    background_tasks: BackgroundTasks,
+    current=Depends(require_user),
+):
     db       = get_supabase()
     settings = get_settings()
 
-    inv = db.table("invoices").select("pdf_path,status,id").eq("id", invoice_id).limit(1).execute()
+    inv = db.table("invoices").select("pdf_path,status,id,uploaded_by").eq("id", invoice_id).limit(1).execute()
     if not inv.data:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
     invoice = inv.data[0]
+    _assert_can_access(invoice, current)
 
     # If the invoice already has a recommendation (extraction actually succeeded but
     # the status update failed), just fix the status and return — no need to re-run.
@@ -441,8 +474,14 @@ async def reprocess_invoice(invoice_id: str, background_tasks: BackgroundTasks):
 
 # ── POST /invoices/{invoice_id}/review ────────────────────────────────────────
 # Records the human reviewer's final decision (approved / rejected).
-@router.post("/{invoice_id}/review", dependencies=[Depends(require_admin)])
-async def review_invoice(invoice_id: str, action: ReviewAction):
+# Approve / reject is an admin-only function: in a real corporate flow the
+# uploader (accountant) and the approver (manager) are different people.
+@router.post("/{invoice_id}/review")
+async def review_invoice(
+    invoice_id: str,
+    action: ReviewAction,
+    admin=Depends(require_admin),
+):
     if action.action not in ("approved", "rejected"):
         raise HTTPException(status_code=400, detail="Action must be 'approved' or 'rejected'")
 
@@ -450,26 +489,27 @@ async def review_invoice(invoice_id: str, action: ReviewAction):
     db.table("invoices").update({
         "status":         action.action,
         "reviewed_at":    datetime.now(timezone.utc).isoformat(),
-        "reviewed_by":    action.reviewer_name,
+        "reviewed_by":    admin["name"] or admin["email"],
         "reviewer_notes": action.notes,
     }).eq("id", invoice_id).execute()
 
-    _log(db, invoice_id, action.action, actor=action.reviewer_name, details={"notes": action.notes})
+    _log(db, invoice_id, action.action, actor=admin["email"], details={"notes": action.notes})
 
-    return {"status": action.action, "message": f"Invoice {action.action} by {action.reviewer_name}"}
+    return {"status": action.action, "message": f"Invoice {action.action} by {admin['name'] or admin['email']}"}
 
 
 # ── GET /invoices/{invoice_id}/file-url ───────────────────────────────────────
 # Returns a fresh short-lived signed URL for the stored invoice file.
 # Used by the detail page so links never go stale.
 @router.get("/{invoice_id}/file-url")
-async def get_invoice_file_url(invoice_id: str):
+async def get_invoice_file_url(invoice_id: str, current=Depends(require_user)):
     db       = get_supabase()
     settings = get_settings()
 
-    inv = db.table("invoices").select("pdf_path").eq("id", invoice_id).limit(1).execute()
+    inv = db.table("invoices").select("pdf_path,uploaded_by").eq("id", invoice_id).limit(1).execute()
     if not inv.data or not inv.data[0].get("pdf_path"):
         raise HTTPException(status_code=404, detail="Invoice file not found")
+    _assert_can_access(inv.data[0], current)
 
     pdf_path = inv.data[0]["pdf_path"]
     signed = db.storage.from_(settings.supabase_storage_bucket).create_signed_url(pdf_path, 3600)
@@ -479,9 +519,15 @@ async def get_invoice_file_url(invoice_id: str):
 
 # ── DELETE /invoices/{invoice_id} ─────────────────────────────────────────────
 # Removes the invoice row + storage file. Cascade handles line items / checks.
-@router.delete("/{invoice_id}", dependencies=[Depends(require_admin)])
-async def delete_invoice(invoice_id: str, deleted_by: str = "admin"):
+@router.delete("/{invoice_id}")
+async def delete_invoice(invoice_id: str, current=Depends(require_user)):
     db = get_supabase()
+    # Verify the user owns this invoice (or is admin)
+    inv = db.table("invoices").select("uploaded_by").eq("id", invoice_id).limit(1).execute()
+    if not inv.data:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _assert_can_access(inv.data[0], current)
+    deleted_by = current["email"]
     settings = get_settings()
 
     inv = db.table("invoices").select("pdf_path,invoice_number").eq("id", invoice_id).limit(1).execute()

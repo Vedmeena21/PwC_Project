@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import invoices, rulebook, settings
+from app.api.routes import invoices, rulebook, settings, auth
 
 app = FastAPI(
     title="Invoice Approval System",
@@ -23,6 +23,7 @@ app.add_middleware(
 
 # ── Route registration ────────────────────────────────────────────────────────
 # All routes are prefixed with /api so the Vite proxy can forward them cleanly.
+app.include_router(auth.router,     prefix="/api")
 app.include_router(invoices.router, prefix="/api")
 app.include_router(rulebook.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
