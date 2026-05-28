@@ -283,12 +283,14 @@ function AddUserForm({ onCreated }) {
 
 // ── Needs Review row ─────────────────────────────────────────────────────────
 function NeedsReviewRow({ inv, onAction }) {
-  const navigate  = useNavigate()
-  const [loading, setLoading] = useState(null) // 'approve' | 'reject'
+  const navigate = useNavigate()
+  const [done,    setDone]    = useState(null) // 'approved' | 'rejected'
+  const [loading, setLoading] = useState(null) // 'approved' | 'rejected'
 
   async function act(verdict) {
     setLoading(verdict)
-    await onAction(inv.id, verdict)
+    setDone(verdict)   // optimistically hide buttons immediately
+    try { await onAction(inv.id, verdict) } catch { setDone(null) }
     setLoading(null)
   }
 
@@ -325,22 +327,27 @@ function NeedsReviewRow({ inv, onAction }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => act('approved')}
-            disabled={loading !== null}
-            className="flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-          >
-            {loading === 'approved' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-            Approve
-          </button>
-          <button
-            onClick={() => act('rejected')}
-            disabled={loading !== null}
-            className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-          >
-            {loading === 'rejected' ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
-            Reject
-          </button>
+          {done ? (
+            <span className="flex items-center gap-1.5 text-xs text-slate-400">
+              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-green-500" />}
+              {loading ? 'Saving…' : done === 'approved' ? 'Approved' : 'Rejected'}
+            </span>
+          ) : (
+            <>
+              <button
+                onClick={() => act('approved')}
+                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+              >
+                <CheckCircle2 className="w-3 h-3" /> Approve
+              </button>
+              <button
+                onClick={() => act('rejected')}
+                className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+              >
+                <XCircle className="w-3 h-3" /> Reject
+              </button>
+            </>
+          )}
           <button
             onClick={() => navigate(`/invoices/${inv.id}`)}
             className="text-slate-400 hover:text-[#EB8C00] transition-colors p-1"
