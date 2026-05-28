@@ -6,8 +6,8 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import { wakeBackend } from '@/services/api'
 import './index.css'
 
-// Wake the Render free-tier backend immediately so the first real
-// request doesn't have to wait ~30s for cold-start.
+// Wake the Render free-tier backend on load so the first real request
+// doesn't have to wait ~30s for cold-start.
 wakeBackend()
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''

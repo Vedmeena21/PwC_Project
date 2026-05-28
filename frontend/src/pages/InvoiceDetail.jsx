@@ -12,17 +12,13 @@ import { useToast } from '@/components/ui/Toast'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { formatDate, formatDateTime, formatCurrency, cn } from '@/lib/utils'
 
-// ── CheckIcon ─────────────────────────────────────────────────────────────────
-// Maps check result to the appropriate icon. Warnings use amber, errors use red.
+// Maps check result to icon — warnings use amber, errors use red.
 const CheckIcon = ({ passed, severity }) => {
   if (passed)                    return <CheckCircle  className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
   if (severity === 'warning')    return <AlertCircle  className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
   return                                <XCircle      className="w-4 h-4 text-red-600   flex-shrink-0 mt-0.5" />
 }
 
-// ── VerdictBanner ─────────────────────────────────────────────────────────────
-// Full-width coloured banner showing the AI's recommendation.
-// Green = approve, Red = reject, Amber = needs manual review.
 const VerdictBanner = ({ verdict, summary, confidence, passedChecks, totalChecks }) => {
   const config = {
     approve:      { bg: 'bg-green-600', label: 'RECOMMEND APPROVAL' },
@@ -48,9 +44,8 @@ const VerdictBanner = ({ verdict, summary, confidence, passedChecks, totalChecks
   )
 }
 
-// ── ProcessingBanner ──────────────────────────────────────────────────────────
-// Shown while the background task is still running. The page auto-polls
-// (see useInvoice hook) so this will replace itself with VerdictBanner.
+// Shown while the background task is running — useInvoice polls automatically,
+// so this replaces itself with VerdictBanner once processing completes.
 const ProcessingBanner = () => (
   <div className="bg-blue-600 rounded-xl p-4 md:p-5 text-white flex items-center gap-3 md:gap-4">
     <span className="w-5 h-5 md:w-6 md:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin flex-shrink-0" />
@@ -67,7 +62,6 @@ export default function InvoiceDetail() {
   const toast    = useToast()
   const { isAdmin, user } = useAuth()
 
-  // useInvoice polls automatically while status is "processing"
   const { data, loading, error, refetch } = useInvoice(id)
 
   const [showAudit,    setShowAudit]    = useState(false)
@@ -101,7 +95,7 @@ export default function InvoiceDetail() {
     }
   }
 
-  // Fetch a fresh signed URL when the user clicks "Open file"
+  // Fetches a fresh short-lived signed URL — avoids serving stale storage links.
   const openSourceFile = async () => {
     try {
       const { url } = await invoiceApi.fileUrl(id)
@@ -132,14 +126,12 @@ export default function InvoiceDetail() {
   const { invoice, line_items = [], validation_checks = [], audit_trail = [] } = data || {}
   const rec = invoice   // invoice_summary view merges recommendation fields inline
 
-  // Determine which UI states to show
   const isProcessing = invoice?.status === 'processing'
   const isReviewable = ['flagged', 'pending'].includes(invoice?.status)
   const isFinalised  = ['approved', 'rejected'].includes(invoice?.status)
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Back + title + delete ── */}
       <div className="flex items-start gap-3">
         <button onClick={() => navigate('/invoices')} className="btn-secondary mt-0.5 flex-shrink-0">
           <ArrowLeft className="w-4 h-4" />
@@ -179,7 +171,6 @@ export default function InvoiceDetail() {
         )}
       </div>
 
-      {/* ── Verdict / processing / failed banner ── */}
       {isProcessing ? (
         <ProcessingBanner />
       ) : invoice?.status === 'extraction_failed' ? (
@@ -212,9 +203,7 @@ export default function InvoiceDetail() {
       ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* ── LEFT COLUMN: invoice metadata, PDF link, line items ── */}
         <div className="space-y-5">
-          {/* Invoice metadata card */}
           <div className="card p-5">
             <h2 className="text-sm font-semibold text-slate-900 mb-4">Invoice Details</h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 md:gap-4">
@@ -234,7 +223,6 @@ export default function InvoiceDetail() {
               ))}
             </div>
 
-            {/* Reviewer decision — only shown after final human action */}
             {isFinalised && (
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <p className="label">Reviewer Decision</p>
@@ -251,7 +239,6 @@ export default function InvoiceDetail() {
             )}
           </div>
 
-          {/* Source file — fetches a fresh short-lived signed URL on click */}
           {invoice && (
             <div className="card p-5">
               <h2 className="text-sm font-semibold text-slate-900 mb-3">Source Document</h2>
@@ -261,7 +248,6 @@ export default function InvoiceDetail() {
             </div>
           )}
 
-          {/* Extracted line items table */}
           {line_items.length > 0 && (
             <div className="card overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100">
@@ -296,9 +282,7 @@ export default function InvoiceDetail() {
           )}
         </div>
 
-        {/* ── RIGHT COLUMN: validation checks, review panel, audit trail ── */}
         <div className="space-y-5">
-          {/* Validation check list */}
           <div className="card p-5">
             <h2 className="text-sm font-semibold text-slate-900 mb-4">Validation Checks</h2>
             {validation_checks.length === 0 ? (
@@ -328,7 +312,6 @@ export default function InvoiceDetail() {
                       )}>
                         {check.message}
                       </p>
-                      {/* Show expected vs actual values when present — helps reviewer understand the discrepancy */}
                       {(check.expected_value || check.actual_value) && (
                         <div className="flex gap-3 mt-1.5 text-xs opacity-70">
                           {check.expected_value && <span>Expected: <strong>{check.expected_value}</strong></span>}
@@ -342,7 +325,6 @@ export default function InvoiceDetail() {
             )}
           </div>
 
-          {/* Awaiting review — direct admin to Manage page */}
           {isReviewable && (
             <div className="card p-5 border border-amber-200 bg-amber-50/40">
               <div className="flex items-start gap-3">
@@ -370,7 +352,6 @@ export default function InvoiceDetail() {
             </div>
           )}
 
-          {/* Audit trail — collapsible timeline of all pipeline events */}
           {audit_trail.length > 0 && (
             <div className="card overflow-hidden">
               <button
@@ -387,7 +368,6 @@ export default function InvoiceDetail() {
                 <div className="border-t border-slate-100 px-5 py-4 space-y-3">
                   {audit_trail.map((log, i) => (
                     <div key={i} className="flex gap-3 text-xs">
-                      {/* Vertical line connecting events */}
                       <div className="flex flex-col items-center">
                         <div className="w-2 h-2 bg-slate-400 rounded-full mt-0.5 flex-shrink-0" />
                         {i < audit_trail.length - 1 && <div className="w-0.5 h-full bg-slate-100 mt-1" />}

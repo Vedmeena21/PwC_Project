@@ -4,24 +4,20 @@ from app.models import (
     InvoiceRecommendation, Verdict, Confidence,
 )
 
-# Arithmetic tolerance: invoice total may differ from computed total by up to 1%
+# Invoice total may differ from computed total by up to 1%
 # (covers rounding in vendor systems and currency formatting).
 TOLERANCE = 0.01
 
 
-# ── Shared helper ─────────────────────────────────────────────────────────────
 def _pct_diff(a: float, b: float) -> float:
-    """Return the fractional difference between a and b relative to b."""
     if b == 0:
         return float("inf")
     return abs(a - b) / b
 
 
-# ── Check 1: Arithmetic ───────────────────────────────────────────────────────
-# Verifies that unit_rate × quantity ≈ total_value within TOLERANCE.
-# A mismatch here almost always means a tampered or mis-keyed invoice.
+# A mismatch between unit_rate × quantity and total_value almost always means
+# a tampered or mis-keyed invoice.
 def run_arithmetic_check(item) -> ValidationCheck:
-    # Cannot verify if any operand is missing — flag as warning, not error
     if item.unit_rate is None or item.quantity is None or item.total_value is None:
         return ValidationCheck(
             check_name="arithmetic_check",
@@ -51,19 +47,17 @@ def run_arithmetic_check(item) -> ValidationCheck:
     )
 
 
-# ── Check 2: Rate ─────────────────────────────────────────────────────────────
-# Compares the invoiced unit_rate against the approved rate in the rulebook.
 # Returns None if rulebook has no rate rule for this category (not an error).
 def run_rate_check(item, rules: dict) -> Optional[ValidationCheck]:
     # Accept either key name for flexibility in rulebook authoring
     approved_rate = rules.get("approved_rate_per_mt") or rules.get("approved_rate")
     if approved_rate is None or item.unit_rate is None:
-        return None  # no rate rule defined — skip silently
+        return None
 
     try:
         approved = float(approved_rate)
     except ValueError:
-        return None  # rulebook value is non-numeric — skip
+        return None  # non-numeric rulebook value — skip
 
     passed = _pct_diff(item.unit_rate, approved) <= TOLERANCE
     unit = rules.get("approved_rate_per_mt_unit") or rules.get("approved_rate_unit", "")
@@ -83,13 +77,10 @@ def run_rate_check(item, rules: dict) -> Optional[ValidationCheck]:
     )
 
 
-# ── Check 3: Quantity ─────────────────────────────────────────────────────────
-# Validates that quantity falls within [min_quantity, max_quantity] from rules.
 def run_quantity_check(item, rules: dict) -> Optional[ValidationCheck]:
     min_qty = rules.get("min_quantity")
     max_qty = rules.get("max_quantity")
 
-    # If neither bound is defined, nothing to check
     if (min_qty is None and max_qty is None) or item.quantity is None:
         return None
 
@@ -122,14 +113,12 @@ def run_quantity_check(item, rules: dict) -> Optional[ValidationCheck]:
         return None  # non-numeric rulebook value — skip gracefully
 
 
-# ── Check 4: Quality grade ────────────────────────────────────────────────────
-# Checks that the invoiced quality_grade is in the comma-separated allowed list.
+# Support multi-grade allowlists e.g. "IS2062 E250, IS2062 E350"
 def run_quality_check(item, rules: dict) -> Optional[ValidationCheck]:
     required = rules.get("required_quality_grade")
     if not required or not item.quality_grade:
-        return None  # no grade rule or grade not extracted
+        return None
 
-    # Support multi-grade allowlists e.g. "IS2062 E250, IS2062 E350"
     allowed = [g.strip().upper() for g in required.split(",")]
     actual = item.quality_grade.strip().upper()
     passed = actual in allowed
@@ -150,9 +139,6 @@ def run_quality_check(item, rules: dict) -> Optional[ValidationCheck]:
     )
 
 
-# ── Main validation entry point ───────────────────────────────────────────────
-# Called after extraction. Runs all four checks per line item and aggregates
-# into a single InvoiceRecommendation with verdict + confidence.
 def validate_invoice(
     extracted: ExtractedInvoiceData,
     rulebook_rules: List[dict],
@@ -166,7 +152,6 @@ def validate_invoice(
         rules_by_category.setdefault(cat, {})
         rules_by_category[cat][rule["rule_key"]] = rule["rule_value"]
         if rule.get("unit"):
-            # Store unit alongside value under a predictable key
             rules_by_category[cat][f"{rule['rule_key']}_unit"] = rule["unit"]
 
     all_checks: List[ValidationCheck] = []
@@ -176,7 +161,6 @@ def validate_invoice(
         # Fall back to "other" category rules if the specific category has none
         rules = rules_by_category.get(cat) or rules_by_category.get("other") or {}
 
-        # Run all four checks; rate/qty/quality return None if inapplicable
         all_checks.append(run_arithmetic_check(item))
         for check in [
             run_rate_check(item, rules),
@@ -186,7 +170,6 @@ def validate_invoice(
             if check is not None:
                 all_checks.append(check)
 
-    # Edge case: no line items or no rules matched at all
     if not all_checks:
         return InvoiceRecommendation(
             verdict=Verdict.needs_review,
@@ -195,16 +178,14 @@ def validate_invoice(
             total_checks=0, passed_checks=0, failed_checks=0, checks=[],
         )
 
-    # Count outcomes — only "error" severity checks block approval
+    # Only "error" severity checks block approval.
     error_failures = [c for c in all_checks if c.severity == "error" and not c.passed]
     passed_count   = sum(1 for c in all_checks if c.passed)
     failed_count   = len(all_checks) - passed_count
 
-    # Determine verdict and confidence
     if not error_failures:
-        # All error-level checks passed
         verdict    = Verdict.approve
-        # High confidence only if we ran 3+ meaningful checks
+        # High confidence only if we ran 3+ meaningful checks.
         confidence = Confidence.high if len(all_checks) >= 3 else Confidence.medium
         summary    = f"All {len(all_checks)} checks passed. Invoice meets current rulebook criteria."
     elif len(error_failures) == 1:

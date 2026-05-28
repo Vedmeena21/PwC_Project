@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime, cn } from '@/lib/utils'
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const CATEGORY_OPTIONS = ['steel_rod', 'steel_plate', 'cement', 'other']
 const RULE_KEY_OPTIONS = [
   'approved_rate_per_mt',
@@ -28,7 +27,6 @@ const emptyRule = () => ({
   description:   '',
 })
 
-// ── DiffView ──────────────────────────────────────────────────────────────────
 const DiffView = ({ diff, onClose }) => {
   if (!diff) return null
 
@@ -99,7 +97,6 @@ const DiffView = ({ diff, onClose }) => {
   )
 }
 
-// ── RulesTable ────────────────────────────────────────────────────────────────
 const RulesTable = ({ rules }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-xs min-w-[480px]">
@@ -125,7 +122,6 @@ const RulesTable = ({ rules }) => (
   </div>
 )
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function Rulebook() {
   const toast               = useToast()
   const { isAdmin, user }   = useAuth()
@@ -148,7 +144,6 @@ export default function Rulebook() {
   const updateRule = (i, field, value) =>
     setForm(f => ({ ...f, rules: f.rules.map((r, idx) => idx === i ? { ...r, [field]: value } : r) }))
 
-  // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!form.label) { toast({ type: 'error', message: 'Rulebook name is required' }); return }
     if (form.rules.some(r => !r.rule_key || !r.rule_value)) {
@@ -168,7 +163,6 @@ export default function Rulebook() {
     }
   }
 
-  // ── Activate ──────────────────────────────────────────────────────────────
   const handleActivate = async (id) => {
     setActivating(id)
     try {
@@ -182,7 +176,6 @@ export default function Rulebook() {
     }
   }
 
-  // ── Diff ──────────────────────────────────────────────────────────────────
   const handleDiff = async (fromId, toId) => {
     setDiffLoading(true)
     try {
@@ -196,7 +189,6 @@ export default function Rulebook() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900">Rulebook</h1>
@@ -214,7 +206,6 @@ export default function Rulebook() {
         )}
       </div>
 
-      {/* ── Active rulebook banner ── */}
       {active && (
         <div className="card p-4 border-l-4 border-l-green-500 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -229,7 +220,6 @@ export default function Rulebook() {
         </div>
       )}
 
-      {/* ── Create form (admin only) ── */}
       {isAdmin && showCreate && (
         <div className="card p-6 animate-slide-up space-y-5">
           <h2 className="text-sm font-semibold text-slate-900">Create New Rulebook Version</h2>
@@ -299,7 +289,6 @@ export default function Rulebook() {
 
       {diff && <DiffView diff={diff} onClose={() => setDiff(null)} />}
 
-      {/* ── Version list ── */}
       <div className="space-y-3">
         {loading ? (
           <div className="card p-8 text-center text-slate-400 text-sm">Loading versions…</div>

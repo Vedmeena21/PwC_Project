@@ -12,7 +12,6 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import { InvoiceRowSkeleton, StatCardSkeleton } from '@/components/ui/Skeleton'
 import { formatDate, formatDateTime, cn } from '@/lib/utils'
 
-// ── Activity feed helpers ─────────────────────────────────────────────────────
 const ACTION_CONFIG = {
   uploaded:           { icon: '↑', color: 'text-slate-400', label: 'uploaded'          },
   processing_started: { icon: '⟳', color: 'text-blue-400',  label: 'started processing' },
@@ -32,21 +31,19 @@ function timeAgo(iso) {
   return `${Math.round(mins / 1440)}d`
 }
 
-// Status → colour. Keyed by name so colours don't shift when a slice is filtered out
-// (previously the colours were positional and Pending would render amber whenever
-// Flagged was 0 because the filter compacted the array).
+// Keyed by name so colours don't shift when a status slice is filtered out
+// (positional colours caused Pending to render amber whenever Flagged was 0).
 const STATUS_COLOR = {
-  Approved: '#16a34a',  // green
-  Rejected: '#dc2626',  // red
-  Flagged:  '#f59e0b',  // amber
-  Pending:  '#2563eb',  // blue — matches the Pending Review stat card
-  Failed:   '#6b7280',  // slate
+  Approved: '#16a34a',
+  Rejected: '#dc2626',
+  Flagged:  '#f59e0b',
+  Pending:  '#2563eb',
+  Failed:   '#6b7280',
 }
 
-// ── Detect touch device (cached once on load) ─────────────────────────────────
+// Cached once on load to avoid repeated matchMedia calls per render.
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches
 
-// ── InvoicePopover (desktop only) ─────────────────────────────────────────────
 function InvoicePopover({ status, visible, anchorRef }) {
   const navigate = useNavigate()
   const filters  = visible
@@ -106,7 +103,6 @@ function InvoicePopover({ status, visible, anchorRef }) {
   )
 }
 
-// ── MobileInvoiceDrawer ───────────────────────────────────────────────────────
 // Inline expandable list shown below the card on tap (mobile only)
 function MobileInvoiceDrawer({ status, open }) {
   const navigate = useNavigate()
@@ -155,7 +151,6 @@ function MobileInvoiceDrawer({ status, open }) {
   )
 }
 
-// ── StatCard ──────────────────────────────────────────────────────────────────
 const ACCENT = {
   'text-slate-900': { border: 'border-l-slate-400',  iconBg: 'bg-slate-100',  gradient: 'from-slate-50' },
   'text-green-600': { border: 'border-l-green-500',  iconBg: 'bg-green-50',   gradient: 'from-green-50' },
@@ -170,12 +165,10 @@ function StatCard({ icon: Icon, label, value, color, sub, filterStatus }) {
   const cardRef          = useRef(null)
   const leaveTimer       = useRef(null)
 
-  // Desktop hover
   const handleMouseEnter = () => { if (IS_TOUCH) return; clearTimeout(leaveTimer.current); setActive(true) }
   const handleMouseLeave = () => { if (IS_TOUCH) return; leaveTimer.current = setTimeout(() => setActive(false), 150) }
   useEffect(() => () => clearTimeout(leaveTimer.current), [])
 
-  // Mobile: tap toggles drawer; desktop: click navigates
   const handleClick = (e) => {
     if (!IS_TOUCH) {
       navigate(filterStatus === 'total' ? '/invoices' : `/invoices?status=${filterStatus}`)
@@ -197,7 +190,6 @@ function StatCard({ icon: Icon, label, value, color, sub, filterStatus }) {
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
     >
-      {/* Subtle gradient wash on active */}
       <div className={cn(
         'absolute inset-0 bg-gradient-to-br to-transparent opacity-0 transition-opacity duration-200 pointer-events-none',
         accent.gradient, active && 'opacity-100'
@@ -218,7 +210,6 @@ function StatCard({ icon: Icon, label, value, color, sub, filterStatus }) {
           </div>
         </div>
 
-        {/* Tap hint — only on touch devices */}
         {IS_TOUCH && (
           <div className={cn(
             'flex items-center gap-1 mt-2 text-[10px] font-medium transition-colors duration-150',
@@ -229,11 +220,9 @@ function StatCard({ icon: Icon, label, value, color, sub, filterStatus }) {
           </div>
         )}
 
-        {/* Mobile inline drawer — only rendered on touch devices */}
         {IS_TOUCH && <MobileInvoiceDrawer status={filterStatus} open={active} />}
       </div>
 
-      {/* Desktop popover — only rendered on non-touch devices */}
       {!IS_TOUCH && <InvoicePopover status={filterStatus} visible={active} anchorRef={cardRef} />}
     </div>
   )
@@ -289,14 +278,12 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
-      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 text-sm mt-0.5">Invoice processing overview</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Admin view toggle */}
           {isAdmin && (
             <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-0.5">
               <button
@@ -328,7 +315,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         {statsLoading && !stats ? (
           Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
@@ -343,9 +329,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Middle row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Upload */}
         <div className="card p-5 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center">
@@ -358,7 +342,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Pie chart */}
         <div className="card p-5 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
@@ -393,7 +376,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* How it works */}
         <div className="card p-5 flex flex-col">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
@@ -423,7 +405,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Recent invoices ── */}
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between px-5 md:px-6 py-4 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-900">Recent Invoices</h2>

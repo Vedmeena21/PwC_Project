@@ -6,7 +6,6 @@ from app.models import (
 )
 
 
-# ── Shared helper: row → RulebookVersion ─────────────────────────────────────
 # Fetches rules for a version row and assembles the full typed object.
 # Centralised here so every reader function stays DRY.
 def _assemble_version(version_row: dict) -> RulebookVersion:
@@ -21,8 +20,6 @@ def _assemble_version(version_row: dict) -> RulebookVersion:
     return RulebookVersion(**{**version_row, "rules": rules})
 
 
-# ── Read: active rulebook ─────────────────────────────────────────────────────
-# Returns the currently active version (is_active=True).
 # Only one version should be active at any time (enforced on activate).
 def get_active_rulebook() -> Optional[RulebookVersion]:
     db = get_supabase()
@@ -38,7 +35,6 @@ def get_active_rulebook() -> Optional[RulebookVersion]:
     return _assemble_version(res.data[0])
 
 
-# ── Read: single version by UUID ─────────────────────────────────────────────
 def get_rulebook_by_id(version_id: str) -> Optional[RulebookVersion]:
     db = get_supabase()
     res = (
@@ -53,7 +49,6 @@ def get_rulebook_by_id(version_id: str) -> Optional[RulebookVersion]:
     return _assemble_version(res.data[0])
 
 
-# ── Read: all versions ordered newest first ───────────────────────────────────
 # Fetches every version + every rule in two queries, then assembles in-memory.
 # Replaces a previous N+1 implementation that did one query per version.
 def list_rulebook_versions() -> List[RulebookVersion]:
@@ -84,13 +79,10 @@ def list_rulebook_versions() -> List[RulebookVersion]:
     ]
 
 
-# ── Write: create a new version ───────────────────────────────────────────────
-# Auto-increments the version number within the same label.
 # New version is inactive by default; must be explicitly activated.
 def create_rulebook_version(request: RulebookCreateRequest) -> RulebookVersion:
     db = get_supabase()
 
-    # Find the highest existing version for this label
     existing = (
         db.table("rulebook_versions")
         .select("version")
@@ -101,18 +93,16 @@ def create_rulebook_version(request: RulebookCreateRequest) -> RulebookVersion:
     )
     next_version = (existing.data[0]["version"] + 1) if existing.data else 1
 
-    # Insert the version header row
     version_res = db.table("rulebook_versions").insert({
         "version":    next_version,
         "label": request.label,
         "notes":      request.notes,
         "created_by": request.created_by,
-        "is_active":  False,  # inactive until explicitly activated
+        "is_active":  False,
     }).execute()
 
     version_id = version_res.data[0]["id"]
 
-    # Bulk-insert all rules linked to this version
     rules_res = db.table("rulebook_rules").insert([
         {
             "version_id":    version_id,
@@ -129,17 +119,14 @@ def create_rulebook_version(request: RulebookCreateRequest) -> RulebookVersion:
     return RulebookVersion(**{**version_res.data[0], "rules": rules})
 
 
-# ── Write: activate a version ─────────────────────────────────────────────────
-# Deactivates ALL versions first (ensures exactly one active at a time),
-# then activates the requested version.
+# Deactivates ALL versions first using a non-null UUID as a dummy neq to affect all rows,
+# then activates the requested version — ensures exactly one active at a time.
 def activate_rulebook(version_id: str) -> RulebookVersion:
     db = get_supabase()
 
-    # Deactivate all — using a non-null UUID as a dummy neq to affect all rows
     db.table("rulebook_versions").update({"is_active": False}) \
       .neq("id", "00000000-0000-0000-0000-000000000000").execute()
 
-    # Activate the chosen version
     res = db.table("rulebook_versions") \
         .update({"is_active": True}) \
         .eq("id", version_id) \
@@ -148,20 +135,16 @@ def activate_rulebook(version_id: str) -> RulebookVersion:
     return _assemble_version(res.data[0])
 
 
-# ── Diff: compare two versions ────────────────────────────────────────────────
-# Produces a structured diff showing added / removed / modified rules.
-# Used both by the API endpoint and the email notification.
+# Index rules by (category, key) for O(1) comparison.
 def diff_rulebook_versions(from_id: str, to_id: str, activated_by: str = None, activated_at=None) -> RulebookDiffResult:
     from_version = get_rulebook_by_id(from_id)
     to_version   = get_rulebook_by_id(to_id)
 
-    # Index rules by (category, key) for O(1) comparison
     from_rules = {(r.item_category, r.rule_key): r for r in from_version.rules}
     to_rules   = {(r.item_category, r.rule_key): r for r in to_version.rules}
 
     changes: List[RuleDiff] = []
 
-    # Find added and modified rules (present in to_version)
     for key, rule in to_rules.items():
         if key not in from_rules:
             changes.append(RuleDiff(
@@ -180,7 +163,6 @@ def diff_rulebook_versions(from_id: str, to_id: str, activated_by: str = None, a
                 description=rule.description,
             ))
 
-    # Find removed rules (present in from_version but not to_version)
     for key, rule in from_rules.items():
         if key not in to_rules:
             changes.append(RuleDiff(

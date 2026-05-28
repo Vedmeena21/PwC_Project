@@ -28,10 +28,8 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <Routes>
-            {/* Public */}
             <Route path="/login" element={<Login />} />
 
-            {/* Protected — all share AuthLayout (ProtectedRoute + Layout) */}
             <Route element={<AuthLayout />}>
               <Route index                element={<Dashboard />} />
               <Route path="invoices"      element={<Invoices />} />

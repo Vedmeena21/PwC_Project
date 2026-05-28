@@ -7,7 +7,6 @@ from app.models import RulebookDiffResult
 from app.models import InvoiceRecommendation
 
 
-# ── Shared: fetch notification recipients from DB ─────────────────────────────
 # Recipients are stored as a JSON array in app_settings so they can be
 # updated via the Settings UI without a redeployment.
 def _get_recipients() -> List[str]:
@@ -27,8 +26,6 @@ def _get_recipients() -> List[str]:
     return []
 
 
-# ── Shared: verdict display helpers ──────────────────────────────────────────
-# Centralised so both email builders use identical colour / label logic.
 def _verdict_color(verdict: str) -> str:
     return {"approve": "#16a34a", "reject": "#dc2626", "needs_review": "#d97706"}.get(verdict, "#6b7280")
 
@@ -39,7 +36,6 @@ def _check_icon(passed: bool) -> str:
     return "✅" if passed else "❌"
 
 
-# ── Shared: HTML email shell ──────────────────────────────────────────────────
 def _email_shell(inner_html: str) -> str:
     return f"""<!DOCTYPE html>
 <html>
@@ -67,8 +63,6 @@ def _email_shell(inner_html: str) -> str:
 </html>"""
 
 
-# ── Shared: PwC header block ──────────────────────────────────────────────────
-# Charcoal background with PwC wordmark and an orange bottom border accent.
 def _header_block(eyebrow: str, title: str) -> str:
     return f"""
     <tr>
@@ -83,7 +77,6 @@ def _header_block(eyebrow: str, title: str) -> str:
     </tr>"""
 
 
-# ── Shared: standard footer ───────────────────────────────────────────────────
 def _footer_block(note: str) -> str:
     return f"""
     <tr>
@@ -93,9 +86,7 @@ def _footer_block(note: str) -> str:
     </tr>"""
 
 
-# ── Shared: send via Resend ───────────────────────────────────────────────────
-# Returns True on success, False on any exception (non-blocking — email
-# failure should never crash the invoice processing pipeline).
+# Email failure must never crash the invoice processing pipeline.
 def _send(subject: str, html: str, recipients: List[str]) -> bool:
     settings = get_settings()
     resend.api_key = settings.resend_api_key
@@ -111,9 +102,6 @@ def _send(subject: str, html: str, recipients: List[str]) -> bool:
         return False
 
 
-# ── Email 1: Invoice flagged ──────────────────────────────────────────────────
-# Sent when an invoice fails one or more validation checks.
-# Includes a per-check breakdown table and a direct link to the review page.
 def send_invoice_flagged_email(
     invoice_number: str,
     vendor_name: str,
@@ -124,13 +112,12 @@ def send_invoice_flagged_email(
     settings  = get_settings()
     recipients = _get_recipients()
     if not recipients:
-        return False  # no recipients configured — skip silently
+        return False
 
     color   = _verdict_color(recommendation.verdict)
     label   = _verdict_label(recommendation.verdict)
     review_url = f"{settings.frontend_url}/invoices/{invoice_id}"
 
-    # Build one table row per validation check
     checks_html = "".join([
         f"""<tr>
               <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-size:14px;">
@@ -200,16 +187,12 @@ def send_invoice_flagged_email(
     )
 
 
-# ── Email 2: Rulebook updated ─────────────────────────────────────────────────
-# Sent when a new rulebook version is activated.
-# Shows a colour-coded diff table (added / modified / removed).
 def send_rulebook_updated_email(diff: RulebookDiffResult) -> bool:
     settings   = get_settings()
     recipients = _get_recipients()
     if not recipients:
         return False
 
-    # Visual config per change type
     TYPE_CFG = {
         "added":    {"color": "#16a34a", "bg": "#f0fdf4", "label": "NEW"},
         "removed":  {"color": "#dc2626", "bg": "#fef2f2", "label": "REMOVED"},
@@ -248,7 +231,6 @@ def send_rulebook_updated_email(diff: RulebookDiffResult) -> bool:
         for c in diff.changes
     ])
 
-    # Format activation metadata for display
     activated_by  = diff.activated_by or "System"
     activated_at  = (
         diff.activated_at.strftime("%d %b %Y at %I:%M %p UTC")
@@ -319,9 +301,7 @@ def send_rulebook_updated_email(diff: RulebookDiffResult) -> bool:
     )
 
 
-# ── Email 3: New user signup awaiting approval ────────────────────────────────
-# Sent to the admin email when a new user submits the signup form.
-# Admin reviews and approves / rejects from the Manage Users page.
+# Sent to admin_email when a new user signs up; admin must approve before they can log in.
 def send_signup_request_email(
     new_user_email: str,
     new_user_name:  str,

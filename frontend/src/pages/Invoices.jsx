@@ -40,7 +40,7 @@ export default function Invoices() {
   const [uploading,      setUploading]      = useState(false)
   const [page,           setPage]           = useState(0)
 
-  // Debounce search input — avoids hammering the API on every keystroke
+  // Debounce search — avoids hammering the API on every keystroke.
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0) }, 300)
     return () => clearTimeout(t)
@@ -80,7 +80,6 @@ export default function Invoices() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900">Invoices</h1>
@@ -89,7 +88,6 @@ export default function Invoices() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Admin view toggle */}
           {isAdmin && (
             <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-0.5">
               <button
@@ -122,14 +120,12 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* ── Inline upload panel ── */}
       {showUpload && (
         <div className="card p-6 animate-slide-up">
           <UploadZone onUpload={handleUpload} uploading={uploading} />
         </div>
       )}
 
-      {/* ── Filters ── */}
       <div className="flex flex-col gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -158,7 +154,6 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* ── Invoice table ── */}
       <div className="card overflow-hidden">
         {loading ? (
           <InvoiceRowSkeleton rows={6} />
@@ -239,7 +234,6 @@ export default function Invoices() {
           </div>
         )}
 
-        {/* ── Pagination ── */}
         {!loading && total > PAGE_SIZE && (
           <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-t border-slate-100 bg-slate-50/40">
             <p className="text-xs text-slate-500">

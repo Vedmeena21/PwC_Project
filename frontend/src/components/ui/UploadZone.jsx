@@ -2,13 +2,11 @@ import { useRef, useState } from 'react'
 import { Upload, FileText, FileSpreadsheet, FileJson, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ── Supported formats ─────────────────────────────────────────────────────────
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.json', '.txt', '.csv']
 const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(',')
 const MAX_FILE_MB = 10
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
 
-// Map extension to display label and icon colour
 const FILE_META = {
   pdf:  { label: 'PDF',   color: 'text-red-600',    bg: 'bg-red-100',    Icon: FileText },
   docx: { label: 'Word',  color: 'text-blue-600',   bg: 'bg-blue-100',   Icon: FileText },
@@ -25,9 +23,6 @@ function getFileMeta(filename) {
   return FILE_META[ext] || { label: ext.toUpperCase(), color: 'text-slate-600', bg: 'bg-slate-100', Icon: FileText }
 }
 
-// ── UploadZone ────────────────────────────────────────────────────────────────
-// Drag-and-drop + click-to-browse uploader for invoice files.
-// Accepts PDF, Word, Excel, JSON, TXT, CSV.
 export default function UploadZone({ onUpload, uploading }) {
   const inputRef              = useRef(null)
   const [dragging, setDragging] = useState(false)
@@ -74,7 +69,6 @@ export default function UploadZone({ onUpload, uploading }) {
 
   return (
     <div className="space-y-3">
-      {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
@@ -87,7 +81,6 @@ export default function UploadZone({ onUpload, uploading }) {
           error     && 'border-red-300 bg-red-50',
         )}
       >
-        {/* Hidden input — triggered programmatically */}
         <input
           ref={inputRef}
           type="file"
@@ -97,7 +90,6 @@ export default function UploadZone({ onUpload, uploading }) {
         />
 
         {file ? (
-          // File preview card
           <div className="flex items-center gap-3 w-full max-w-sm">
             <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', meta.bg)}>
               <meta.Icon className={cn('w-5 h-5', meta.color)} />
@@ -108,7 +100,7 @@ export default function UploadZone({ onUpload, uploading }) {
                 {(file.size / 1024).toFixed(1)} KB · {meta.label}
               </p>
             </div>
-            {/* Stop propagation so clear doesn't re-open the picker */}
+            {/* clicking clear must not bubble to the drop zone and re-open the file picker */}
             <button
               onClick={(e) => { e.stopPropagation(); clear() }}
               className="w-7 h-7 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors"
@@ -117,7 +109,6 @@ export default function UploadZone({ onUpload, uploading }) {
             </button>
           </div>
         ) : (
-          // Empty state
           <>
             <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
               <Upload className="w-6 h-6 text-slate-400" />
@@ -133,7 +124,6 @@ export default function UploadZone({ onUpload, uploading }) {
         )}
       </div>
 
-      {/* Inline error — shown for oversized or unsupported files */}
       {error && (
         <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
           <X className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -141,7 +131,6 @@ export default function UploadZone({ onUpload, uploading }) {
         </div>
       )}
 
-      {/* Upload button — only shown when a valid file is staged */}
       {file && !error && (
         <button onClick={() => onUpload(file)} disabled={uploading} className="btn-primary w-full justify-center">
           {uploading ? (

@@ -8,14 +8,6 @@ import { useAuth } from '@/context/AuthContext'
 const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID &&
   import.meta.env.VITE_GOOGLE_CLIENT_ID !== 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID')
 
-// ── PwC Login Page ────────────────────────────────────────────────────────────
-// Instagram-style single-screen flow:
-//   Default view = Sign In
-//   "New here? Create an account" link flips to Sign Up
-//   After signup → pending approval message
-//
-// Colour palette: PwC official brand (orange #EB8C00, charcoal #2D2D2D)
-
 export default function Login() {
   const { login } = useAuth()
   const navigate  = useNavigate()
@@ -33,18 +25,15 @@ export default function Login() {
 
   const switchMode = (m) => { setMode(m); setError(''); setShowPw(false) }
 
-  // ── Google OAuth handler ──────────────────────────────────────────────────
   async function handleGoogleSuccess(credentialResponse) {
     setError('')
     setLoading(true)
     try {
       const data = await api.post('/auth/google', { credential: credentialResponse.credential })
       if (data.access_token) {
-        // Approved user — log straight in
         login(data.access_token, data.user)
         navigate('/', { replace: true })
       } else {
-        // New user — pending approval
         setPending(true)
       }
     } catch (err) {
@@ -87,12 +76,10 @@ export default function Login() {
     }
   }
 
-  // ── Pending approval screen ───────────────────────────────────────────────
   if (pending) {
     return (
       <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center px-4">
         <div className="w-full max-w-md text-center space-y-5">
-          {/* PwC wordmark */}
           <PwCLogo />
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-4">
             <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto">
@@ -123,17 +110,13 @@ export default function Login() {
     <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm space-y-4">
 
-        {/* ── PwC Wordmark ── */}
         <PwCLogo />
 
-        {/* ── Main card ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-          {/* Orange top accent bar */}
           <div className="h-1 bg-gradient-to-r from-[#EB8C00] to-[#D04A02]" />
 
           <div className="px-8 py-7 space-y-5">
-            {/* Title */}
             <div className="text-center">
               <h1 className="text-[#2D2D2D] text-xl font-bold">
                 {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
@@ -143,10 +126,8 @@ export default function Login() {
               </p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
 
-              {/* Name — signup only */}
               {mode === 'signup' && (
                 <div>
                   <label className="block text-xs font-medium text-[#464646] mb-1.5">
@@ -162,7 +143,6 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Email */}
               <div>
                 <label className="block text-xs font-medium text-[#464646] mb-1.5">
                   Email address <span className="text-[#E0301E]">*</span>
@@ -178,7 +158,6 @@ export default function Login() {
                 />
               </div>
 
-              {/* Password */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-medium text-[#464646]">
@@ -208,7 +187,6 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Access reason — signup only */}
               {mode === 'signup' && (
                 <div>
                   <label className="block text-xs font-medium text-[#464646] mb-1.5">
@@ -226,7 +204,6 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Error */}
               {error && (
                 <div className="flex items-start gap-2 text-[#E0301E] text-xs bg-red-50 border border-red-200 rounded-lg px-3.5 py-2.5">
                   <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -236,7 +213,6 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
@@ -248,7 +224,7 @@ export default function Login() {
             </form>
           </div>
 
-          {/* ── Google sign-in (only shown when Client ID is configured) ── */}
+          {/* Only shown when Google Client ID is configured */}
           {GOOGLE_ENABLED && (
             <div className="px-8 pb-5 space-y-3">
               <div className="flex items-center gap-3">
@@ -270,7 +246,6 @@ export default function Login() {
             </div>
           )}
 
-          {/* ── Mode switcher (Instagram-style bottom strip) ── */}
           <div className="border-t border-gray-100 px-8 py-4 text-center bg-gray-50/60">
             {mode === 'login' ? (
               <p className="text-sm text-gray-500">
@@ -302,11 +277,9 @@ export default function Login() {
   )
 }
 
-// ── PwC Logo / Wordmark ───────────────────────────────────────────────────────
 function PwCLogo() {
   return (
     <div className="text-center space-y-2 py-2">
-      {/* PwC-style wordmark using their actual font weight */}
       <div className="flex items-center justify-center gap-2.5">
         <div className="flex items-center">
           <span className="text-[#2D2D2D] text-3xl font-black tracking-tight leading-none">Pw</span>
@@ -322,7 +295,6 @@ function PwCLogo() {
   )
 }
 
-// ── Footer ────────────────────────────────────────────────────────────────────
 function PwCFooter() {
   return null
 }

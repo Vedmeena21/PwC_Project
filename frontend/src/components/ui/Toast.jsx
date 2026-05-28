@@ -2,12 +2,8 @@ import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ── Toast context ─────────────────────────────────────────────────────────────
-// Provides a toast(options) function to any component in the tree.
-// Usage: const toast = useToast(); toast({ type: 'success', message: '...' })
 const ToastContext = createContext(null)
 
-// Visual config per toast type
 const ICONS  = { success: CheckCircle, error: XCircle, info: AlertCircle }
 const COLORS = {
   success: 'border-green-200 bg-green-50',
@@ -20,7 +16,6 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const idRef = useRef(0)
 
-  // Add a toast and auto-remove after `duration` ms
   const toast = useCallback(({ type = 'info', message, duration = 4000 }) => {
     const id = ++idRef.current
     setToasts((prev) => [...prev, { id, type, message }])
@@ -33,8 +28,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={toast}>
       {children}
 
-      {/* Toast stack — fixed bottom-right, pointer-events-none on container
-          so toasts don't block page clicks when empty */}
+      {/* pointer-events-none on container so an empty stack doesn't block page clicks */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none">
         {toasts.map((t) => {
           const Icon = ICONS[t.type]

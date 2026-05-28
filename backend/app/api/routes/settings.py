@@ -10,20 +10,17 @@ from app.auth.dependencies import require_admin
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
-# Keys the frontend is allowed to update via PUT /settings/{key}
 EDITABLE_KEYS = {"auto_notify_on_flag", "auto_notify_on_rulebook_update"}
 
 
-# ── Request bodies ────────────────────────────────────────────────────────────
 class RecipientUpdate(BaseModel):
-    recipients: List[str]   # full replacement list of email addresses
+    recipients: List[str]
+
 
 class SettingUpdate(BaseModel):
-    value: str              # "true" | "false" for boolean settings
+    value: str  # "true" | "false" for boolean settings
 
 
-# ── GET /settings/ ────────────────────────────────────────────────────────────
-# Returns all settings as a flat key→value dict for the Settings page.
 @router.get("/")
 async def get_all_settings():
     db = get_supabase()
@@ -31,8 +28,6 @@ async def get_all_settings():
     return {row["key"]: row["value"] for row in res.data}
 
 
-# ── GET /settings/recipients ──────────────────────────────────────────────────
-# Returns the parsed list of email recipients (stored as JSON string in DB).
 @router.get("/recipients")
 async def get_recipients():
     db = get_supabase()
@@ -43,21 +38,18 @@ async def get_recipients():
     return {"recipients": json.loads(res.data[0]["value"])}
 
 
-# ── PUT /settings/recipients ──────────────────────────────────────────────────
-# Replaces the entire recipients list (full overwrite, not append).
+# Full replacement list — not append.
 @router.put("/recipients", dependencies=[Depends(require_admin)])
 async def update_recipients(body: RecipientUpdate):
     db = get_supabase()
     db.table("app_settings").update({
-        "value":      json.dumps(body.recipients),  # persist as JSON array string
+        "value":      json.dumps(body.recipients),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }).eq("key", "notification_recipients").execute()
     return {"recipients": body.recipients, "message": "Recipients updated"}
 
 
-# ── PUT /settings/{key} ───────────────────────────────────────────────────────
-# Updates a single boolean setting. Only EDITABLE_KEYS are allowed
-# to prevent arbitrary DB writes via this endpoint.
+# Only EDITABLE_KEYS are allowed to prevent arbitrary DB writes via this endpoint.
 @router.put("/{key}", dependencies=[Depends(require_admin)])
 async def update_setting(key: str, body: SettingUpdate):
     if key not in EDITABLE_KEYS:

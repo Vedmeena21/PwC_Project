@@ -9,8 +9,6 @@ from app.core.config import get_settings
 from app.models import ExtractedInvoiceData, LineItemExtracted
 
 
-# ── Groq extraction prompt ────────────────────────────────────────────────────
-# Strict JSON schema enforced so output can be parsed without ambiguity.
 # temperature=0.1 keeps extraction deterministic across runs.
 EXTRACTION_PROMPT = """You are an invoice data extraction engine. Extract structured data from the invoice text below.
 
@@ -53,7 +51,6 @@ Rules:
 Invoice text:
 """
 
-# Supported MIME types and their canonical extension group
 SUPPORTED_TYPES = {
     "application/pdf":                                                   "pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
@@ -68,18 +65,9 @@ SUPPORTED_TYPES = {
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".json", ".txt", ".csv"}
 
 
-# ── PDF → text (with OCR fallback for image-only pages) ──────────────────────
-# pdfplumber extracts selectable text first. If a page yields nothing
-# (scanned/image PDF), pytesseract OCR is run on a rendered page image.
+# pymupdf (fitz) is used as the primary PDF parser — ships as a self-contained wheel,
+# no system binaries needed. For image-only pages, falls back to pytesseract if available.
 def _pdf_to_text(file_bytes: bytes) -> str:
-    # pymupdf (fitz) is used as the primary PDF parser. It ships as a self-contained
-    # wheel with MuPDF compiled in — no system binaries needed, works on Render free tier.
-    # For pages with no selectable text (scanned/image PDFs), pymupdf renders the page
-    # to a pixmap and runs its built-in OCR (Tesseract LSTM bundled since pymupdf 1.23+
-    # via the optional pymupdf-fonts / ocrmypdf path — but base fitz.Page.get_text()
-    # with the "text" flag already recovers text from most image PDFs via MuPDF's
-    # internal heuristics). For true zero-text pages we fall back to pytesseract if
-    # available on the host, otherwise we note the page and move on.
     import fitz  # pymupdf
 
     try:
@@ -94,15 +82,12 @@ def _pdf_to_text(file_bytes: bytes) -> str:
     doc = fitz.open(stream=file_bytes, filetype="pdf")
 
     for page in doc:
-        # get_text("text") extracts all selectable text including text in images
-        # that MuPDF can decode (handles most digitally-created PDFs perfectly).
         page_text = page.get_text("text").strip()
 
-        # Also extract tables via block layout — each block on separate line
+        # b = (x0, y0, x1, y1, text, block_no, block_type)
         blocks = page.get_text("blocks")
         block_lines = []
         for b in blocks:
-            # b = (x0, y0, x1, y1, text, block_no, block_type)
             if b[6] == 0 and b[4].strip():  # type 0 = text block
                 block_lines.append(b[4].strip().replace("\n", " "))
 
@@ -119,15 +104,13 @@ def _pdf_to_text(file_bytes: bytes) -> str:
             if ocr_text.strip():
                 text_parts.append(f"[OCR] {ocr_text.strip()}")
         else:
-            # No text and no OCR — Groq will return low confidence for this page
             text_parts.append("[image-only page — install tesseract for OCR]")
 
     doc.close()
     return "\n".join(text_parts)
 
 
-# ── DOCX → text ───────────────────────────────────────────────────────────────
-# Extracts paragraphs and table cells. Tables rendered as pipe-delimited rows.
+# Tables rendered as pipe-delimited rows for consistent LLM parsing.
 def _docx_to_text(file_bytes: bytes) -> str:
     from docx import Document  # python-docx
 
@@ -147,9 +130,7 @@ def _docx_to_text(file_bytes: bytes) -> str:
     return "\n".join(parts)
 
 
-# ── XLSX / XLS → text ────────────────────────────────────────────────────────
-# Reads every sheet; each row becomes a pipe-delimited string.
-# openpyxl covers .xlsx; xlrd covers legacy .xls (openpyxl falls back gracefully).
+# openpyxl covers .xlsx; xlrd covers legacy .xls.
 def _xlsx_to_text(file_bytes: bytes) -> str:
     import openpyxl
 
@@ -166,8 +147,6 @@ def _xlsx_to_text(file_bytes: bytes) -> str:
     return "\n".join(parts)
 
 
-# ── JSON → text ───────────────────────────────────────────────────────────────
-# Pretty-prints the JSON so the LLM can read key-value pairs naturally.
 def _json_to_text(file_bytes: bytes) -> str:
     try:
         data = json.loads(file_bytes.decode("utf-8", errors="replace"))
@@ -176,8 +155,6 @@ def _json_to_text(file_bytes: bytes) -> str:
         raise ValueError(f"Invalid JSON file: {e}")
 
 
-# ── TXT / CSV → text ──────────────────────────────────────────────────────────
-# Plain text returned as-is. CSV rows are pipe-delimited for consistent formatting.
 def _txt_to_text(file_bytes: bytes, filename: str) -> str:
     raw = file_bytes.decode("utf-8", errors="replace")
 
@@ -189,7 +166,6 @@ def _txt_to_text(file_bytes: bytes, filename: str) -> str:
     return raw
 
 
-# ── Route bytes to the correct extractor ─────────────────────────────────────
 # Determines format from filename extension (more reliable than MIME on uploads).
 def _file_to_text(file_bytes: bytes, filename: str) -> str:
     name = filename.lower()
@@ -208,18 +184,15 @@ def _file_to_text(file_bytes: bytes, filename: str) -> str:
     raise ValueError(f"Unsupported file type: {filename}")
 
 
-# ── Parse Groq JSON response ──────────────────────────────────────────────────
-# Groq may wrap JSON in ```json fences, prefix with chatter, or add a trailing
-# note. We strip fences first, then find the outermost balanced {...} block.
+# Groq may wrap JSON in ```json fences or prefix with chatter — strip fences
+# first, then find the outermost balanced {...} block.
 def _parse_json(content: str) -> dict:
     text = content.strip()
 
-    # Strip markdown code fences if present
     fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if fence:
         return json.loads(fence.group(1))
 
-    # Fall back to balanced-brace scan to capture the outermost JSON object
     start = text.find("{")
     if start == -1:
         raise ValueError("Groq response contained no JSON object")
@@ -234,20 +207,17 @@ def _parse_json(content: str) -> dict:
     raise ValueError("Groq response had unbalanced JSON braces")
 
 
-# ── Main extraction entry point ───────────────────────────────────────────────
-# Called by the background pipeline after upload.
 # filename is passed so we can route to the correct parser.
 def extract_invoice_data(file_bytes: bytes, filename: str = "invoice.pdf") -> ExtractedInvoiceData:
     settings = get_settings()
     client   = Groq(api_key=settings.groq_api_key)
 
-    # Step 1 — convert file to plain text using the appropriate parser
     raw_text = _file_to_text(file_bytes, filename)
 
-    # Step 2 — truncate to 6000 chars to stay within Groq context limits
+    # Truncate to 6000 chars to stay within Groq context limits.
     prompt = EXTRACTION_PROMPT + raw_text[:6000]
 
-    # Step 3 — send to Groq with retry on rate limit (free tier: 30 RPM)
+    # Retry on rate limit — free tier is 30 RPM.
     import time
     for attempt in range(3):
         try:
@@ -260,14 +230,12 @@ def extract_invoice_data(file_bytes: bytes, filename: str = "invoice.pdf") -> Ex
             break
         except Exception as e:
             if attempt < 2 and ("rate" in str(e).lower() or "temporarily" in str(e).lower() or "429" in str(e)):
-                time.sleep(8)  # wait 8s and retry
+                time.sleep(8)
                 continue
             raise
 
-    # Step 4 — parse the JSON block from the response
     raw_json = _parse_json(response.choices[0].message.content)
 
-    # Step 5 — map JSON line_items to typed objects
     line_items = []
     for i, item in enumerate(raw_json.get("line_items", [])):
         dims = item.get("dimensions") or {}

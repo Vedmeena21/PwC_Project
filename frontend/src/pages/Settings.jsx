@@ -4,8 +4,6 @@ import { settingsApi } from '@/services/api'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 
-// ── Add-Recipient modal ───────────────────────────────────────────────────────
-// Lets the admin type any email address to add as a notification recipient.
 function AddRecipientModal({ existing, onAdd, onClose }) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
@@ -119,7 +117,6 @@ export default function Settings() {
         <p className="text-slate-500 text-sm mt-1">Configure notifications and system preferences</p>
       </div>
 
-      {/* ── Email recipients ── */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Mail className="w-4 h-4 text-slate-600" />
@@ -176,7 +173,6 @@ export default function Settings() {
         )}
       </div>
 
-      {/* ── Notification toggles ── */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-slate-600" />
@@ -209,7 +205,6 @@ export default function Settings() {
         )}
       </div>
 
-      {/* Save */}
       {isAdmin && (
         <button onClick={saveAll} disabled={saving} className="btn-primary w-full sm:w-auto justify-center">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

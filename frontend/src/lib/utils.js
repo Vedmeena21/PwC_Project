@@ -1,15 +1,12 @@
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-// ── cn ────────────────────────────────────────────────────────────────────────
-// Merges Tailwind class strings safely. Handles conditional classes (clsx)
-// and removes Tailwind conflicts (twMerge) e.g. p-4 + p-2 → p-2.
+// Merges Tailwind class strings, resolving conflicts (e.g. p-4 + p-2 → p-2).
 export function cn(...inputs) {
   return twMerge(clsx(inputs))
 }
 
-// ── Currency formatting ───────────────────────────────────────────────────────
-// Uses the Indian locale and INR currency code for comma grouping (1,00,000).
+// Indian locale and INR currency code for comma grouping (1,00,000).
 export function formatCurrency(value) {
   if (value == null) return '—'
   return new Intl.NumberFormat('en-IN', {
@@ -17,7 +14,6 @@ export function formatCurrency(value) {
   }).format(value)
 }
 
-// ── Date formatting ───────────────────────────────────────────────────────────
 export function formatDate(dateStr) {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -33,8 +29,6 @@ export function formatDateTime(dateStr) {
   })
 }
 
-// ── Verdict display helpers ───────────────────────────────────────────────────
-// Used by multiple pages; centralised to keep colours consistent.
 export function verdictColor(verdict) {
   return { approve: 'text-green-700', reject: 'text-red-700', needs_review: 'text-amber-700' }[verdict] || 'text-slate-600'
 }

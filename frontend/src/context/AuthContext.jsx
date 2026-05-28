@@ -1,10 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import api from '@/services/api'
 
-// ── AuthContext ───────────────────────────────────────────────────────────────
-// Stores JWT + user object; provides login / logout helpers.
-// Persists token to localStorage so refresh doesn't log users out.
-
 const AuthContext = createContext(null)
 
 const TOKEN_KEY = 'ias_token'

@@ -4,8 +4,6 @@ from datetime import datetime
 from enum import Enum
 
 
-# ══ INVOICE MODELS ════════════════════════════════════════════════════════════
-
 # pending → processing → flagged | approved | rejected | extraction_failed
 # "flagged" means AI recommends reject/review; human hasn't acted yet.
 class InvoiceStatus(str, Enum):
@@ -98,15 +96,12 @@ class ReviewAction(BaseModel):
     notes:         Optional[str] = None
 
 
-# ══ RULEBOOK MODELS ═══════════════════════════════════════════════════════════
-
 # One rule = one (item_category, rule_key) pair with a value + optional unit.
-# e.g. item_category="steel_rod", rule_key="approved_rate_per_mt", rule_value="54500"
 class RuleEntry(BaseModel):
     id:            Optional[str] = None  # UUID assigned by Supabase on insert
     item_category: str
     rule_key:      str
-    rule_value:    str                   # always stored as text; engine parses
+    rule_value:    str  # always stored as text; engine parses to numeric when needed
     unit:          Optional[str] = None
     description:   Optional[str] = None
 
@@ -114,7 +109,7 @@ class RuleEntry(BaseModel):
 class RulebookVersion(BaseModel):
     id:         Optional[str]      = None
     version:    int                       # auto-incremented per label
-    label:      str                       # free text e.g. "May 2025", "Q1 Revision"
+    label:      str
     created_at: Optional[datetime] = None
     created_by: Optional[str]      = None
     notes:      Optional[str]      = None

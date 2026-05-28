@@ -40,7 +40,6 @@ function Avatar({ name, email }) {
   )
 }
 
-// ── Pending card ──────────────────────────────────────────────────────────────
 function PendingCard({ user, onApprove, onReject }) {
   const [loading,    setLoading]    = useState(false)
   const [done,       setDone]       = useState(false)   // optimistic "acted" state
@@ -49,7 +48,7 @@ function PendingCard({ user, onApprove, onReject }) {
 
   async function approve() {
     setLoading(true)
-    setDone(true)   // immediately collapse the buttons
+    setDone(true)
     try { await onApprove(user.id) } catch { setDone(false) }
     setLoading(false)
   }
@@ -138,7 +137,6 @@ function PendingCard({ user, onApprove, onReject }) {
   )
 }
 
-// ── User row ──────────────────────────────────────────────────────────────────
 function UserRow({ user, currentUserId, onDelete }) {
   const [confirming, setConfirming] = useState(false)
   const [loading,    setLoading]    = useState(false)
@@ -146,7 +144,7 @@ function UserRow({ user, currentUserId, onDelete }) {
 
   async function doDelete() {
     setLoading(true)
-    setConfirming(false) // immediately hide confirm buttons
+    setConfirming(false)
     try { await onDelete(user.id) } catch { setLoading(false) }
     // don't setLoading(false) on success — row unmounts
   }
@@ -194,7 +192,6 @@ function UserRow({ user, currentUserId, onDelete }) {
   )
 }
 
-// ── Add User form ─────────────────────────────────────────────────────────────
 function AddUserForm({ onCreated }) {
   const { toast } = useToast()
   const [open,    setOpen]    = useState(false)
@@ -281,7 +278,6 @@ function AddUserForm({ onCreated }) {
   )
 }
 
-// ── Needs Review row ─────────────────────────────────────────────────────────
 function NeedsReviewRow({ inv, onAction }) {
   const navigate = useNavigate()
   const [done,    setDone]    = useState(null) // 'approved' | 'rejected'
@@ -361,7 +357,6 @@ function NeedsReviewRow({ inv, onAction }) {
   )
 }
 
-// ── Main Manage page ──────────────────────────────────────────────────────────
 export default function Manage() {
   const { user: currentUser } = useAuth()
   const { toast }             = useToast()
@@ -437,17 +432,15 @@ export default function Manage() {
   }
 
   async function handleInvoiceAction(id, verdict) {
-    // Optimistically remove from list immediately — don't wait for API
+    // Optimistically remove from list — don't wait for API response.
     setFlagged(prev => prev.filter(inv => inv.id !== id))
     notifyManageAction()
     try {
       await invoiceApi.review(id, { action: verdict, notes: '' })
       toast(`Invoice ${verdict}.`, 'success')
-      // Refresh in background after server has caught up
       setTimeout(refreshFlagged, 1500)
     } catch (err) {
       toast(err.message, 'error')
-      // Re-fetch to restore the row if the API call failed
       refreshFlagged()
     }
   }
@@ -462,13 +455,11 @@ export default function Manage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Manage Users</h1>
         <p className="text-slate-500 text-sm mt-1">Review pending requests, manage all users, or add users directly.</p>
       </div>
 
-      {/* Pending queue */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-amber-500" />
@@ -494,7 +485,6 @@ export default function Manage() {
         )}
       </section>
 
-      {/* Needs Review queue */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -540,10 +530,8 @@ export default function Manage() {
         )}
       </section>
 
-      {/* Add user form */}
       <AddUserForm onCreated={refresh} />
 
-      {/* All users table */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <UserIcon className="w-4 h-4 text-slate-400" />

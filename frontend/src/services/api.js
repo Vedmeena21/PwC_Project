@@ -1,6 +1,5 @@
 import axios from 'axios'
 
-// ── Axios instance ────────────────────────────────────────────────────────────
 // In dev the Vite proxy forwards /api → localhost:8000.
 // In production reads VITE_API_URL; falls back to the deployed Render URL.
 const PROD_URL = import.meta.env.VITE_API_URL || 'https://pwc-project-ld7g.onrender.com/api'
@@ -11,12 +10,10 @@ const api = axios.create({
   timeout: 60000, // 60s — PDF upload + Groq extraction can take ~15s
 })
 
-// ── Auth token injector ───────────────────────────────────────────────────────
 // Bearer JWT is set on api.defaults.headers.common by AuthContext when the user
 // logs in. We also check localStorage here as a fallback so that the first
 // request on page load (before React mounts) still carries the token.
 api.interceptors.request.use((config) => {
-  // If the header isn't already set, pull from localStorage
   if (!config.headers['Authorization']) {
     const token = localStorage.getItem('ias_token')
     if (token) config.headers['Authorization'] = `Bearer ${token}`
@@ -24,10 +21,6 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// ── Response interceptor ──────────────────────────────────────────────────────
-// Unwraps .data so callers get the payload directly (not the Axios wrapper).
-// Normalises errors to plain Error objects with a human-readable message.
-// 401 = token expired / invalid → clear storage and redirect to /login.
 api.interceptors.response.use(
   (res) => res.data,
   (err) => {
@@ -58,9 +51,7 @@ api.interceptors.response.use(
   }
 )
 
-// ── Invoice API ───────────────────────────────────────────────────────────────
 export const invoiceApi = {
-  // Sends PDF as multipart/form-data — backend stores to Supabase Storage
   upload: (file) => {
     const form = new FormData()
     form.append('file', file)
@@ -79,10 +70,8 @@ export const invoiceApi = {
 }
 
 // Wake-up ping — Render free tier sleeps after 15min of inactivity.
-// Frontend calls this on app load so the first real request is fast.
 export const wakeBackend = () => fetch(`${baseURL.replace(/\/api$/, '')}/health`).catch(() => {})
 
-// ── Rulebook API ──────────────────────────────────────────────────────────────
 export const rulebookApi = {
   list:      ()                  => api.get('/rulebook/'),
   getActive: ()                  => api.get('/rulebook/active'),
@@ -92,7 +81,6 @@ export const rulebookApi = {
   diff:      (fromId, toId)      => api.get(`/rulebook/${fromId}/diff/${toId}`),
 }
 
-// ── Settings API ──────────────────────────────────────────────────────────────
 export const settingsApi = {
   getAll:           ()           => api.get('/settings/'),
   getRecipients:    ()           => api.get('/settings/recipients'),
@@ -100,12 +88,10 @@ export const settingsApi = {
   updateSetting:    (key, value) => api.put(`/settings/${key}`, { value }),
 }
 
-// ── Auth API ──────────────────────────────────────────────────────────────────
 export const authApi = {
   login:   (email, password)       => api.post('/auth/login',   { email, password }),
   signup:  (payload)               => api.post('/auth/signup',  payload),
   me:      ()                      => api.get('/auth/me'),
-  // Admin endpoints
   pending: ()                      => api.get('/auth/users/pending'),
   users:   ()                      => api.get('/auth/users'),
   approve: (id)                    => api.post(`/auth/users/${id}/approve`),

@@ -2,10 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoiceApi, rulebookApi, authApi } from '@/services/api'
 
 
-// ══ INVOICE HOOKS ════════════════════════════════════════════════════════════
-
-// Fetches the invoice list with optional filters (status, limit, offset).
-// Re-fetches whenever filters change. Exposes refetch() for manual refresh.
 export function useInvoices(filters = {}) {
   const [invoices, setInvoices] = useState([])
   const [total,    setTotal]    = useState(0)
@@ -31,7 +27,6 @@ export function useInvoices(filters = {}) {
   return { invoices, total, loading, error, refetch: fetch }
 }
 
-// Fetches a single invoice with full detail (line items, checks, audit trail).
 // Auto-polls every 3 seconds while status is "processing" so the detail page
 // updates without a manual refresh.
 export function useInvoice(id) {
@@ -61,8 +56,8 @@ export function useInvoice(id) {
 
   useEffect(() => { fetch() }, [fetch])
 
-  // Poll while processing. Stop after 60 attempts (~3 minutes) so a stuck
-  // background task doesn't poll forever and burn quota.
+  // Stop after 60 attempts (~3 minutes) so a stuck background task doesn't poll
+  // forever and burn API quota.
   const pollCountRef = useRef(0)
   useEffect(() => {
     const status = data?.invoice?.status
@@ -79,7 +74,6 @@ export function useInvoice(id) {
   return { data, loading, error, refetch: fetch }
 }
 
-// Fetches per-status invoice counts for the Dashboard stat cards.
 // view: 'all' (admin sees everyone) | 'mine' (own uploads only)
 export function useStats(view = 'all') {
   const [stats,   setStats]   = useState(null)
@@ -97,7 +91,6 @@ export function useStats(view = 'all') {
 }
 
 
-// ══ MANAGE BADGE HOOK ════════════════════════════════════════════════════════
 // Returns the total count of actions needed in Manage:
 // pending user approvals + invoices awaiting review (flagged + pending).
 // Polls every 30s so the badge stays fresh without hammering the API.
@@ -142,10 +135,6 @@ export function notifyManageAction() {
 }
 
 
-// ══ RULEBOOK HOOKS ════════════════════════════════════════════════════════════
-
-// Fetches all rulebook versions (newest first) for the Rulebook manager page.
-// Exposes refetch() so the list updates after create / activate.
 export function useRulebookVersions() {
   const [versions, setVersions] = useState([])
   const [loading,  setLoading]  = useState(true)
@@ -167,7 +156,6 @@ export function useRulebookVersions() {
   return { versions, loading, error, refetch: fetch }
 }
 
-// Fetches the currently active rulebook version.
 // Returns null if no version has been activated yet.
 export function useActiveRulebook() {
   const [rulebook, setRulebook] = useState(null)

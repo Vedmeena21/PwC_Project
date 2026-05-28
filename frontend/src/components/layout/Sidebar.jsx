@@ -5,8 +5,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { useManageBadge } from '@/hooks/useApi'
 
-// ── Sidebar nav items ─────────────────────────────────────────────────────────
-// Manage is only rendered for admins (conditional below).
+// Manage is admin-only (conditional below).
 const BASE_NAV = [
   { to: '/',         label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/invoices', label: 'Invoices',  icon: FileText },
@@ -46,13 +45,11 @@ function NavItem({ to, label, icon: Icon, end, badge = 0 }) {
   )
 }
 
-// ── Profile chip ──────────────────────────────────────────────────────────────
 function ProfileChip({ onSignout }) {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const ref  = useRef(null)
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handler)
@@ -69,7 +66,6 @@ function ProfileChip({ onSignout }) {
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
       >
-        {/* Avatar circle — PwC orange */}
         <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
           style={{ backgroundColor: '#EB8C00' }}>
           {initials}
@@ -81,7 +77,6 @@ function ProfileChip({ onSignout }) {
         <ChevronDown className={cn('w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0', open && 'rotate-180')} />
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
           <button
@@ -113,10 +108,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ── Desktop sidebar (hidden on mobile) ── */}
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col z-30 border-r border-gray-200 bg-white">
         <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-          {/* PwC wordmark */}
           <div className="flex items-center gap-1.5">
             <div className="flex items-baseline">
               <span className="text-[#2D2D2D] text-xl font-black tracking-tight leading-none">Pw</span>
@@ -141,7 +134,6 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* ── Mobile top bar ── */}
       <header className="md:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30">
         <div className="flex items-center gap-2">
           <span className="text-[#2D2D2D] text-lg font-black tracking-tight">Pw</span>
@@ -153,7 +145,6 @@ export default function Sidebar() {
         </button>
       </header>
 
-      {/* ── Mobile bottom nav ── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-30 flex">
         {nav.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink

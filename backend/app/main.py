@@ -7,12 +7,11 @@ app = FastAPI(
     title="Invoice Approval System",
     description="Automated invoice parsing, validation, and approval recommendation engine",
     version="1.0.0",
-    docs_url="/docs",    # Swagger UI — useful for manual testing and exploration
-    redoc_url="/redoc",  # ReDoc alternative view
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
-# Open CORS — no cookies or auth headers cross origins, so credentials are off.
+# No cookies or auth headers cross origins, so credentials are off.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,7 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Route registration ────────────────────────────────────────────────────────
 # All routes are prefixed with /api so the Vite proxy can forward them cleanly.
 app.include_router(auth.router,     prefix="/api")
 app.include_router(invoices.router, prefix="/api")
@@ -29,7 +27,6 @@ app.include_router(rulebook.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 
 
-# ── Health check ──────────────────────────────────────────────────────────────
 # Pinged by UptimeRobot every 5 minutes to keep the Render free instance warm.
 @app.get("/health")
 async def health():
