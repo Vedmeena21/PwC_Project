@@ -144,7 +144,12 @@ function UserRow({ user, currentUserId, onDelete }) {
   const [loading,    setLoading]    = useState(false)
   const isSelf = user.id === currentUserId
 
-  async function doDelete() { setLoading(true); await onDelete(user.id); setLoading(false) }
+  async function doDelete() {
+    setLoading(true)
+    setConfirming(false) // immediately hide confirm buttons
+    try { await onDelete(user.id) } catch { setLoading(false) }
+    // don't setLoading(false) on success — row unmounts
+  }
 
   return (
     <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -169,12 +174,14 @@ function UserRow({ user, currentUserId, onDelete }) {
       <td className="px-4 py-3 text-right">
         {isSelf ? (
           <span className="text-slate-300 text-xs">You</span>
+        ) : loading ? (
+          <span className="text-xs text-slate-400 flex items-center justify-end gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" /> Deleting…
+          </span>
         ) : confirming ? (
           <div className="flex items-center justify-end gap-2">
             <span className="text-xs text-red-500">Delete?</span>
-            <button onClick={doDelete} disabled={loading} className="text-xs text-red-500 hover:text-red-700 font-medium">
-              {loading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : 'Yes'}
-            </button>
+            <button onClick={doDelete} className="text-xs text-red-500 hover:text-red-700 font-medium">Yes</button>
             <button onClick={() => setConfirming(false)} className="text-xs text-slate-400 hover:text-slate-600">No</button>
           </div>
         ) : (
