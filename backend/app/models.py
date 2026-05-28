@@ -94,7 +94,7 @@ class InvoiceSummary(BaseModel):
 
 class ReviewAction(BaseModel):
     action:        str  # "approved" or "rejected"
-    reviewer_name: str
+    reviewer_name: Optional[str] = None  # unused — reviewer identity comes from JWT
     notes:         Optional[str] = None
 
 
