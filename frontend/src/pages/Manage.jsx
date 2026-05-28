@@ -406,13 +406,29 @@ export default function Manage() {
   useEffect(() => { refresh(); refreshFlagged() }, [refresh, refreshFlagged])
 
   async function handleApprove(id) {
-    try { await authApi.approve(id); toast('User approved.', 'success'); refresh(); notifyManageAction() }
-    catch (err) { toast(err.message, 'error') }
+    setPending(prev => prev.filter(u => u.id !== id))
+    notifyManageAction()
+    try {
+      await authApi.approve(id)
+      toast('User approved.', 'success')
+      setTimeout(refresh, 1500)
+    } catch (err) {
+      toast(err.message, 'error')
+      refresh()
+    }
   }
 
   async function handleReject(id, reason) {
-    try { await authApi.reject(id, reason); toast('User rejected.', 'success'); refresh(); notifyManageAction() }
-    catch (err) { toast(err.message, 'error') }
+    setPending(prev => prev.filter(u => u.id !== id))
+    notifyManageAction()
+    try {
+      await authApi.reject(id, reason)
+      toast('User rejected.', 'success')
+      setTimeout(refresh, 1500)
+    } catch (err) {
+      toast(err.message, 'error')
+      refresh()
+    }
   }
 
   async function handleDelete(id) {
@@ -421,13 +437,18 @@ export default function Manage() {
   }
 
   async function handleInvoiceAction(id, verdict) {
+    // Optimistically remove from list immediately — don't wait for API
+    setFlagged(prev => prev.filter(inv => inv.id !== id))
+    notifyManageAction()
     try {
       await invoiceApi.review(id, { action: verdict, notes: '' })
       toast(`Invoice ${verdict}.`, 'success')
-      refreshFlagged()
-      notifyManageAction()
+      // Refresh in background after server has caught up
+      setTimeout(refreshFlagged, 1500)
     } catch (err) {
       toast(err.message, 'error')
+      // Re-fetch to restore the row if the API call failed
+      refreshFlagged()
     }
   }
 
