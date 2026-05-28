@@ -137,24 +137,6 @@ export default function InvoiceDetail() {
   const isReviewable = ['flagged', 'pending'].includes(invoice?.status)
   const isFinalised  = ['approved', 'rejected'].includes(invoice?.status)
 
-  // Submit human review decision (approve or reject)
-  const handleReview = async (action) => {
-    if (!reviewerName.trim()) {
-      toast({ type: 'error', message: 'Please enter your name before submitting' })
-      return
-    }
-    setSubmitting(true)
-    try {
-      await invoiceApi.review(id, { action, reviewer_name: reviewerName, notes: reviewNotes })
-      toast({ type: 'success', message: `Invoice ${action} successfully` })
-      refetch()
-    } catch (e) {
-      toast({ type: 'error', message: e.message })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* ── Back + title + delete ── */}
