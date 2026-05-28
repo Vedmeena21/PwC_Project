@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # who can approve / reject the request). Defaults to the seed admin.
     admin_email: str = "ved@example.com"
 
+    # Google OAuth — client ID from Google Cloud Console.
+    # Leave empty to disable the "Sign in with Google" button.
+    google_client_id: str = ""
+
     class Config:
         env_file      = ".env"
         case_sensitive = False

@@ -9,7 +9,7 @@ from app.auth.service import (
     create_access_token, get_user_by_email, get_user_by_id,
     hash_password, public_user, verify_password,
 )
-from app.core.config import get_supabase
+from app.core.config import get_supabase, get_settings
 from app.notifications.email import send_signup_request_email
 
 
@@ -220,3 +220,90 @@ async def delete_user(user_id: str, admin=Depends(require_admin)):
     db = get_supabase()
     db.table("users").delete().eq("id", user_id).execute()
     return {"status": "deleted", "user_id": user_id}
+
+
+# ── POST /auth/google ─────────────────────────────────────────────────────────
+# Verifies a Google ID token from the frontend, then:
+#   - If the user exists and is approved  → issue our JWT immediately (sign in)
+#   - If the user exists but is pending   → 403 (still awaiting admin approval)
+#   - If the user exists but is rejected  → 403
+#   - If the user is brand new            → create pending account + email admin
+#
+# We deliberately keep the same admin-approval gate as email/password signup.
+# Google auth just removes the need for a password — trust in identity still
+# requires an admin to grant access.
+class GoogleTokenBody(BaseModel):
+    credential: str   # The raw Google ID token string from @react-oauth/google
+
+
+@router.post("/google")
+async def google_auth(body: GoogleTokenBody, background_tasks: BackgroundTasks):
+    settings = get_settings()
+
+    if not settings.google_client_id:
+        raise HTTPException(status_code=501, detail="Google login is not configured on this server")
+
+    # Verify the ID token with Google's public keys.
+    # google-auth does the full verification: signature, audience, expiry.
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        id_info = id_token.verify_oauth2_token(
+            body.credential,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google token: {e}")
+
+    email = id_info.get("email", "").lower().strip()
+    name  = id_info.get("name", "") or id_info.get("given_name", "") or email.split("@")[0]
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account has no email address")
+
+    db       = get_supabase()
+    existing = get_user_by_email(email)
+
+    if existing:
+        if existing["status"] == "approved":
+            # Already an approved user — issue JWT just like a normal login
+            token = create_access_token(user_id=existing["id"], role=existing["role"])
+            return {
+                "access_token": token,
+                "token_type":   "bearer",
+                "user":         public_user(existing),
+            }
+        elif existing["status"] == "pending":
+            raise HTTPException(
+                status_code=403,
+                detail="Your access request is awaiting admin approval."
+            )
+        else:  # rejected
+            raise HTTPException(
+                status_code=403,
+                detail="Your access request was rejected. Contact the admin."
+            )
+    else:
+        # New user via Google — create pending account (no password needed)
+        db.table("users").insert({
+            "email":         email,
+            "password_hash": "",     # empty — Google users never use a password
+            "name":          name,
+            "role":          "user",
+            "status":        "pending",
+            "signup_note":   "Signed up via Google",
+        }).execute()
+
+        # Notify admin
+        background_tasks.add_task(
+            send_signup_request_email,
+            new_user_email=email,
+            new_user_name=name,
+            signup_note="Signed up via Google",
+        )
+
+        return {
+            "status":  "pending_approval",
+            "message": "Your access request has been sent. You'll be able to log in once an admin approves it.",
+        }

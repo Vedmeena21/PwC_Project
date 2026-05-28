@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { GoogleLogin } from '@react-oauth/google'
 import api from '@/services/api'
 import { useAuth } from '@/context/AuthContext'
+
+const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID &&
+  import.meta.env.VITE_GOOGLE_CLIENT_ID !== 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID')
 
 // ── PwC Login Page ────────────────────────────────────────────────────────────
 // Instagram-style single-screen flow:
@@ -28,6 +32,31 @@ export default function Login() {
   const [note,     setNote]     = useState('')
 
   const switchMode = (m) => { setMode(m); setError(''); setShowPw(false) }
+
+  // ── Google OAuth handler ──────────────────────────────────────────────────
+  async function handleGoogleSuccess(credentialResponse) {
+    setError('')
+    setLoading(true)
+    try {
+      const data = await api.post('/auth/google', { credential: credentialResponse.credential })
+      if (data.access_token) {
+        // Approved user — log straight in
+        login(data.access_token, data.user)
+        navigate('/', { replace: true })
+      } else {
+        // New user — pending approval
+        setPending(true)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleGoogleError() {
+    setError('Google sign-in failed. Please try again or use email/password.')
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -218,6 +247,28 @@ export default function Login() {
               </button>
             </form>
           </div>
+
+          {/* ── Google sign-in (only shown when Client ID is configured) ── */}
+          {GOOGLE_ENABLED && (
+            <div className="px-8 pb-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 font-medium">or</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="outline"
+                  size="large"
+                  width="320"
+                  text={mode === 'signup' ? 'signup_with' : 'signin_with'}
+                  shape="rectangular"
+                />
+              </div>
+            </div>
+          )}
 
           {/* ── Mode switcher (Instagram-style bottom strip) ── */}
           <div className="border-t border-gray-100 px-8 py-4 text-center bg-gray-50/60">
